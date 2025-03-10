@@ -1,5 +1,6 @@
 package com.example.universe.presentation.auth
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.universe.domain.models.User
@@ -67,7 +68,22 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun register(email: String, name: String, password: String) {
+    fun register(name: String, email: String, password: String) {
+        _registerState.value = RegisterState.Loading
+        Log.d("AuthViewModel", "Attempting to register with email: $email, name: $name")
+
+        viewModelScope.launch {
+            registerUseCase(name, email, password)
+                .onSuccess { user ->
+                    _registerState.value = RegisterState.Success
+                    _authState.value = AuthState.Authenticated(user)
+                }
+                .onFailure { error ->
+                    _registerState.value = RegisterState.Error(error.message ?: "Unknown error")
+                }
+        }
+    }
+    fun register1(email: String, name: String, password: String) {
         _registerState.value = RegisterState.Loading
         viewModelScope.launch {
             registerUseCase(email, name, password)

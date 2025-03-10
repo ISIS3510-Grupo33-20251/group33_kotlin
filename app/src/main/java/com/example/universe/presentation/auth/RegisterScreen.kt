@@ -1,34 +1,25 @@
 package com.example.universe.presentation.auth
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Text
-import androidx.compose.material.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.universe.ui.theme.LogoFirstTypography
 
 @Composable
 fun RegisterScreen(
@@ -39,10 +30,9 @@ fun RegisterScreen(
     val registerState by viewModel.registerState.collectAsState()
     val authState by viewModel.authState.collectAsState()
 
-    var email by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(authState) {
@@ -64,61 +54,134 @@ fun RegisterScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier = Modifier.fillMaxSize()
     ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            // Bottom left circle
+            drawCircle(
+                color = Color(0x80667EFF),
+                radius = 120.dp.toPx(),
+                center = Offset(-20.dp.toPx(), size.height - 350.dp.toPx())
+            )
+
+            // Top right shape
+            drawCircle(
+                color = Color(0x80667EFF),
+                radius = 150.dp.toPx(),
+                center = Offset(380.dp.toPx(), size.height - 550.dp.toPx())
+            )
+        }
+
+        // Content
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .fillMaxSize()
+                .padding(horizontal = 5.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(80.dp))
+
+            // UniVerse
             Text(
-                text = "Create Account",
-                style = MaterialTheme.typography.h4
+                text = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = Color.Black)) {
+                        append("Uni")
+                    }
+                    append("\n") // Add a newline
+                    withStyle(style = SpanStyle(color = Color(0xFF4285F4))) {
+                        append("Verse")
+                    }
+                },
+                fontSize = 96.sp,
+                style = LogoFirstTypography.copy(
+                    lineHeight = 80.sp  // Reduce the line height
+                ),
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(80.dp))
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
+            // Name field
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Name",
+                    color = Color.DarkGray,
+                    style = MaterialTheme.typography.caption,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            TextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = TextFieldDefaults.textFieldColors(
+                    backgroundColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            OutlinedTextField(
+            // Email field
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Email",
+                    color = Color.DarkGray,
+                    style = MaterialTheme.typography.caption,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            TextField(
+                value = email,
+                onValueChange = { email = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = TextFieldDefaults.textFieldColors(
+                    backgroundColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Password field
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Password",
+                    color = Color.DarkGray,
+                    style = MaterialTheme.typography.caption,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
-                modifier = Modifier.fillMaxWidth(),
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it },
-                label = { Text("Confirm Password") },
-                modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = TextFieldDefaults.textFieldColors(
+                    backgroundColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true
             )
 
             if (errorMessage.isNotEmpty()) {
@@ -130,39 +193,53 @@ fun RegisterScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
+            // Register button
             Button(
                 onClick = {
-                    when {
-                        email.isEmpty() || name.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() -> {
-                            errorMessage = "Please fill in all fields"
-                        }
-                        password != confirmPassword -> {
-                            errorMessage = "Passwords do not match"
-                        }
-                        else -> {
-                            viewModel.register(email, name, password)
-                        }
+                    if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty()) {
+                        viewModel.register(name, email, password)
+                    } else {
+                        errorMessage = "Please fill in all fields"
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .width(200.dp)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = Color(0xFF667EFF),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(8.dp),
                 enabled = registerState !is RegisterState.Loading
             ) {
                 if (registerState is RegisterState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colors.onPrimary
+                        color = Color.White
                     )
                 } else {
-                    Text("Register")
+                    Text(
+                        "Sign Up",
+                        color = Color.White
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            TextButton(onClick = onNavigateToLogin) {
-                Text("Already have an account? Log in")
+            // Already have an account link
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                TextButton(onClick = onNavigateToLogin) {
+                    Text(
+                        "Already have an account? Log in",
+                        color = Color.Gray
+                    )
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ package com.example.universe.data.repositories
 
 import android.content.SharedPreferences
 import com.example.universe.data.api.AuthApiService
+import com.example.universe.data.models.ErrorResponse
 import com.example.universe.data.models.LoginRequestDto
 import com.example.universe.data.models.RegisterRequestDto
 import com.example.universe.domain.models.LoginCredentials
@@ -11,6 +12,7 @@ import com.example.universe.domain.repositories.AuthRepository
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import retrofit2.HttpException
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
@@ -39,7 +41,17 @@ class AuthRepositoryImpl @Inject constructor(
 
             Result.success(User(response.userId, response.email, response.name))
         } catch (e: Exception) {
-            Result.failure(e)
+            if (e is HttpException && e.code() == 401) {
+                try {
+                    val errorBody = e.response()?.errorBody()?.string()
+                    val errorJson: ErrorResponse = gson.fromJson(errorBody, ErrorResponse::class.java)
+                    Result.failure(Exception(errorJson.detail ?: "Authentication failed"))
+                } catch (jsonException: Exception) {
+                    Result.failure(Exception("Invalid email or password"))
+                }
+            } else {
+                Result.failure(Exception("Login failed: ${e.localizedMessage}"))
+            }
         }
     }
 
@@ -62,7 +74,17 @@ class AuthRepositoryImpl @Inject constructor(
 
             Result.success(User(response.userId, response.email, response.name))
         } catch (e: Exception) {
-            Result.failure(e)
+            if (e is HttpException && e.code() == 400) {
+                try {
+                    val errorBody = e.response()?.errorBody()?.string()
+                    val errorJson: ErrorResponse = gson.fromJson(errorBody, ErrorResponse::class.java)
+                    Result.failure(Exception(errorJson.detail ?: "Authentication failed"))
+                } catch (jsonException: Exception) {
+                    Result.failure(Exception("Email already exists"))
+                }
+            } else {
+                Result.failure(Exception("Login failed: ${e.localizedMessage}"))
+            }
         }
     }
 

@@ -19,6 +19,7 @@ import com.example.universe.presentation.auth.AuthState
 import com.example.universe.presentation.auth.AuthViewModel
 import com.example.universe.presentation.auth.LoginScreen
 import com.example.universe.presentation.auth.RegisterScreen
+import com.example.universe.presentation.WelcomeScreen
 import com.example.universe.ui.theme.UniverseTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -57,34 +58,37 @@ fun AppNavHost(
         navController = navController,
         startDestination = when (authState) {
             is AuthState.Authenticated -> "home"
-            else -> "login"
+            else -> "welcome"
         }
     ) {
+        composable("welcome") {
+            WelcomeScreen(
+                onNavigateToLogin = { navController.navigate("login") },
+                onNavigateToRegister = { navController.navigate("register") }
+            )
+        }
+
         composable("login") {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate("register") },
-                onLoginSuccess = { navController.navigate("home") { popUpTo("login") { inclusive = true } } }
+                onLoginSuccess = { navController.navigate("home") { popUpTo("welcome") { inclusive = true } } }
             )
         }
+
         composable("register") {
             RegisterScreen(
                 onNavigateToLogin = { navController.navigate("login") },
-                onRegisterSuccess = { navController.navigate("home") { popUpTo("register") { inclusive = true } } }
+                onRegisterSuccess = { navController.navigate("home") { popUpTo("welcome") { inclusive = true } } }
             )
         }
+
         composable("home") {
-            // We'll implement this screen later
-            // For now, we'll just show a placeholder
-            HomeScreen(onLogout = onLogout)
+            HomeScreen()
         }
     }
 }
 
 @Composable
-fun HomeScreen(onLogout: () -> Unit) {
-    // Simple placeholder for the home screen
-    // We'll implement this in detail later
-    androidx.compose.material.Button(onClick = onLogout) {
-        androidx.compose.material.Text("Logout")
-    }
+fun HomeScreen() {
+
 }

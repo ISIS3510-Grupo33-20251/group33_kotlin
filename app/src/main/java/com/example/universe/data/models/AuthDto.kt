@@ -6,8 +6,8 @@ data class LoginRequestDto(
 )
 
 data class RegisterRequestDto(
-    val email: String,
     val name: String,
+    val email: String,
     val password: String
 )
 
