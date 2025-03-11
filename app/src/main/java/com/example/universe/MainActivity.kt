@@ -23,6 +23,7 @@ import com.example.universe.presentation.auth.AuthViewModel
 import com.example.universe.presentation.auth.LoginScreen
 import com.example.universe.presentation.auth.RegisterScreen
 import com.example.universe.presentation.WelcomeScreen
+import com.example.universe.presentation.friends.FriendsScreen
 import com.example.universe.presentation.home.HomeScreen
 import com.example.universe.ui.theme.UniverseTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -88,9 +89,19 @@ fun AppNavHost(
 
         composable("home") {
             HomeScreen(
-                onMenuClick = { /* Handle menu click */ },
+                onFriendsClick = { navController.navigate("friends") },
                 onRemindersClick = { navController.navigate("reminders") },
                 onScheduleClick = { /* Already on schedule */ },
+                onAssignmentsClick = { navController.navigate("assignments") }
+            )
+        }
+
+        composable("friends") {
+            FriendsScreen(
+                onBackClick = { navController.navigateUp() },
+                onSearchClick = { /* Handle search action */ },
+                onRemindersClick = { navController.navigate("reminders") },
+                onScheduleClick = { navController.navigate("home") },
                 onAssignmentsClick = { navController.navigate("assignments") }
             )
         }
