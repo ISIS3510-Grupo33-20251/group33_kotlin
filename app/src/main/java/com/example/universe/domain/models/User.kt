@@ -11,5 +11,7 @@ data class User(
 
 data class Location(
     val latitude: Double,
-    val longitude: Double
+    val longitude: Double,
+    val lastUpdated: Long = System.currentTimeMillis(),
+    val accuracy: Float? = null
 )

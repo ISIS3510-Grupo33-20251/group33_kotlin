@@ -3,12 +3,15 @@ package com.example.universe
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -20,6 +23,7 @@ import com.example.universe.presentation.auth.AuthViewModel
 import com.example.universe.presentation.auth.LoginScreen
 import com.example.universe.presentation.auth.RegisterScreen
 import com.example.universe.presentation.WelcomeScreen
+import com.example.universe.presentation.home.HomeScreen
 import com.example.universe.ui.theme.UniverseTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -83,12 +87,28 @@ fun AppNavHost(
         }
 
         composable("home") {
-            HomeScreen()
+            HomeScreen(
+                onMenuClick = { /* Handle menu click */ },
+                onRemindersClick = { navController.navigate("reminders") },
+                onScheduleClick = { /* Already on schedule */ },
+                onAssignmentsClick = { navController.navigate("assignments") }
+            )
+        }
+
+        composable("reminders") {
+            // Reminder screen will go here
+            // For now, just show a text indicating this is the reminders screen
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Reminders Screen")
+            }
+        }
+
+        composable("assignments") {
+            // Assignments screen will go here
+            // For now, just show a text indicating this is the assignments screen
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Assignments Screen")
+            }
         }
     }
-}
-
-@Composable
-fun HomeScreen() {
-
 }

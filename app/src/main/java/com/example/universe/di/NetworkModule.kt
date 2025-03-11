@@ -1,6 +1,7 @@
 package com.example.universe.di
 
 import com.example.universe.data.api.AuthApiService
+import com.example.universe.data.api.UserApiService
 import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
@@ -46,5 +47,11 @@ object NetworkModule {
     @Singleton
     fun provideAuthApiService(retrofit: Retrofit): AuthApiService {
         return retrofit.create(AuthApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserApiService(retrofit: Retrofit): UserApiService {
+        return retrofit.create(UserApiService::class.java)
     }
 }
