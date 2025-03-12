@@ -1,6 +1,7 @@
 package com.example.universe.data.repositories
 
 import android.content.SharedPreferences
+import android.util.Log
 import com.example.universe.data.api.AuthApiService
 import com.example.universe.data.models.ErrorResponse
 import com.example.universe.data.models.LoginRequestDto
@@ -101,15 +102,17 @@ class AuthRepositoryImpl @Inject constructor(
 
     override fun getCurrentUser(): Flow<User?> = flow {
         val userJson = sharedPreferences.getString(KEY_USER, null)
-        if (userJson != null) {
+        val user = if (userJson != null) {
             try {
-                emit(gson.fromJson(userJson, User::class.java))
+                gson.fromJson(userJson, User::class.java)
             } catch (e: Exception) {
-                emit(null)
+                Log.e("AuthRepository", "Error parsing user JSON: ${e.message}")
+                null
             }
         } else {
-            emit(null)
+            null
         }
+        emit(user)
     }
 
     override fun getAuthToken(): String? {

@@ -83,19 +83,6 @@ class AuthViewModel @Inject constructor(
                 }
         }
     }
-    fun register1(email: String, name: String, password: String) {
-        _registerState.value = RegisterState.Loading
-        viewModelScope.launch {
-            registerUseCase(email, name, password)
-                .onSuccess { user ->
-                    _registerState.value = RegisterState.Success
-                    _authState.value = AuthState.Authenticated(user)
-                }
-                .onFailure { error ->
-                    _registerState.value = RegisterState.Error(error.message ?: "Unknown error")
-                }
-        }
-    }
 
     fun logout() {
         viewModelScope.launch {

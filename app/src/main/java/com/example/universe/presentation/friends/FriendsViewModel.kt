@@ -6,6 +6,7 @@ import com.example.universe.domain.models.FriendRequest
 import com.example.universe.domain.models.User
 import com.example.universe.domain.repositories.FriendRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,8 +25,6 @@ class FriendsViewModel @Inject constructor(
     val friendRequestsState: StateFlow<FriendRequestsState> = _friendRequestsState.asStateFlow()
 
     init {
-        loadFriends()
-        loadFriendRequests()
     }
 
     fun loadFriends() {
@@ -46,7 +45,7 @@ class FriendsViewModel @Inject constructor(
             _friendRequestsState.value = FriendRequestsState.Loading
             friendRepository.getPendingFriendRequests()
                 .onSuccess { requests ->
-                    _friendRequestsState.value = FriendRequestsState.Success(requests)
+                    _friendRequestsState.value = FriendRequestsState.Success
                 }
                 .onFailure { error ->
                     _friendRequestsState.value = FriendRequestsState.Error(error.message ?: "Unknown error")
@@ -54,12 +53,16 @@ class FriendsViewModel @Inject constructor(
         }
     }
 
-    fun sendFriendRequest(userId: String) {
+    fun sendFriendRequest(email: String) {
+        println("Attempting to send friend request to: $email")
         viewModelScope.launch {
-            friendRepository.sendFriendRequest(userId)
+            _friendRequestsState.value = FriendRequestsState.Loading
+            friendRepository.sendFriendRequest(email)
                 .onSuccess {
+                    _friendRequestsState.value = FriendRequestsState.Success
                 }
                 .onFailure { error ->
+                    _friendRequestsState.value = FriendRequestsState.Error("We could not find a User with that email")
                 }
         }
     }
@@ -106,7 +109,8 @@ sealed class FriendsState {
 }
 
 sealed class FriendRequestsState {
+    object Initial : FriendRequestsState()
+    object Success : FriendRequestsState()
     object Loading : FriendRequestsState()
-    data class Success(val requests: List<FriendRequest>) : FriendRequestsState()
     data class Error(val message: String) : FriendRequestsState()
 }

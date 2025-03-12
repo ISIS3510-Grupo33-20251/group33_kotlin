@@ -26,6 +26,7 @@ import androidx.compose.ui.zIndex
 @Composable
 fun HomeScreen(
     onFriendsClick: () -> Unit,
+    onLogoutClick: () -> Unit,
     onRemindersClick: () -> Unit,
     onScheduleClick: () -> Unit,
     onAssignmentsClick: () -> Unit
@@ -81,6 +82,10 @@ fun HomeScreen(
                     onGuideClick = {
                         // Navigate to guide
                         showMenu = false
+                    },
+                    onLogoutClick = {
+                        onLogoutClick()
+                        showMenu = false
                     }
                 )
             }
@@ -94,7 +99,8 @@ fun SideMenu(
     onFriendsClick: () -> Unit,
     onShareClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onGuideClick: () -> Unit
+    onGuideClick: () -> Unit,
+    onLogoutClick: () -> Unit
 ) {
     Card(
         modifier = modifier,
@@ -112,6 +118,8 @@ fun SideMenu(
             MenuItem("Settings", onSettingsClick)
             Divider()
             MenuItem("Guide", onGuideClick)
+            Divider()
+            MenuItem("Logout", onLogoutClick)
         }
     }
 }

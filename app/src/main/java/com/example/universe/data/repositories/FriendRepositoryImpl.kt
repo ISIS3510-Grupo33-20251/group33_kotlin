@@ -3,12 +3,15 @@ package com.example.universe.data.repositories
 import android.content.SharedPreferences
 import com.example.universe.data.api.UserApiService
 import com.example.universe.data.models.FriendRequestDto
+import com.example.universe.data.models.SendFriendRequestDto
 import com.example.universe.domain.models.FriendRequest
 import com.example.universe.domain.models.FriendRequestStatus
 import com.example.universe.domain.models.User
 import com.example.universe.domain.repositories.AuthRepository
 import com.example.universe.domain.repositories.FriendRepository
 import com.google.gson.Gson
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -52,14 +55,33 @@ class FriendRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun sendFriendRequest(userId: String): Result<Unit> {
+    override suspend fun sendFriendRequest(email: String): Result<Unit> {
         return try {
             val token = authRepository.getAuthToken() ?: return Result.failure(Exception("Not authenticated"))
-            userApiService.sendFriendRequest("Bearer $token", userId)
+
+            val userJson = sharedPreferences.getString("user", null)
+            val senderId = if (userJson != null) {
+                try {
+                    val user = gson.fromJson(userJson, User::class.java)
+                    user?.id ?: return Result.failure(Exception("User ID not found"))
+                } catch (e: Exception) {
+                    return Result.failure(Exception("Failed to parse user data: ${e.message}"))
+                }
+            } else {
+                return Result.failure(Exception("User not logged in"))
+            }
+
+            val request = SendFriendRequestDto(senderId, email)
+
+            println("Sending friend request: $request") // Add logging
+
+            userApiService.sendFriendRequest("Bearer $token", request)
             Result.success(Unit)
         } catch (e: Exception) {
-            if (e is HttpException) {
-                Result.failure(Exception("Failed to send friend request: ${e.message()}"))
+            println("Friend request error: ${e.message}") // Add logging
+            e.printStackTrace() // Print stack trace
+            if (e is HttpException && e.code() == 404) {
+                Result.failure(Exception("User not found"))
             } else {
                 Result.failure(Exception("Failed to send friend request: ${e.localizedMessage}"))
             }
@@ -104,12 +126,7 @@ class FriendRepositoryImpl @Inject constructor(
                     id = dto.id,
                     senderId = dto.senderId,
                     receiverId = dto.receiverId,
-                    status = when (dto.status) {
-                        "pending" -> FriendRequestStatus.PENDING
-                        "accepted" -> FriendRequestStatus.ACCEPTED
-                        "rejected" -> FriendRequestStatus.REJECTED
-                        else -> FriendRequestStatus.PENDING
-                    },
+                    status = dto.status,
                     createdAt = dto.createdAt
                 )
             }

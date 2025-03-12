@@ -1,7 +1,8 @@
 package com.example.universe.data.api
 
-import com.example.universe.data.models.UserDto
 import com.example.universe.data.models.FriendRequestDto
+import com.example.universe.data.models.UserDto
+import com.example.universe.data.models.SendFriendRequestDto
 import com.example.universe.domain.models.Location
 import retrofit2.http.*
 
@@ -18,11 +19,11 @@ interface UserApiService {
         @Body location: Location
     )
 
-    @POST("friend_requests")
+    @POST("friend_requests/by_email")
     suspend fun sendFriendRequest(
         @Header("Authorization") token: String,
-        @Query("receiver_id") receiverId: String
-    )
+        @Body request: SendFriendRequestDto
+    ): okhttp3.ResponseBody
 
     @GET("friend_requests/pending")
     suspend fun getPendingFriendRequests(@Header("Authorization") token: String): List<FriendRequestDto>

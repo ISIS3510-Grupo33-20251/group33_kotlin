@@ -90,6 +90,10 @@ fun AppNavHost(
         composable("home") {
             HomeScreen(
                 onFriendsClick = { navController.navigate("friends") },
+                onLogoutClick = {
+                    onLogout()
+                    navController.navigate("welcome") { popUpTo("home") { inclusive = true } }
+                },
                 onRemindersClick = { navController.navigate("reminders") },
                 onScheduleClick = { /* Already on schedule */ },
                 onAssignmentsClick = { navController.navigate("assignments") }

@@ -1,4 +1,3 @@
-// ui/theme/Theme.kt
 package com.example.universe.ui.theme
 
 import androidx.compose.material.MaterialTheme
