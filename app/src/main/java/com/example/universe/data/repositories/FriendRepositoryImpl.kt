@@ -25,7 +25,9 @@ class FriendRepositoryImpl @Inject constructor(
     override suspend fun getFriends(): Result<List<User>> {
         return try {
             val token = authRepository.getAuthToken() ?: return Result.failure(Exception("Not authenticated"))
-            val response = userApiService.getFriends("Bearer $token")
+            val currentUser = authRepository.getCurrentUser().first() ?: return Result.failure(Exception("User not found"))
+
+            val response = userApiService.getFriends("Bearer $token", currentUser.id)
 
             val friends = response.map { userDto ->
                 User(
@@ -119,7 +121,9 @@ class FriendRepositoryImpl @Inject constructor(
     override suspend fun getPendingFriendRequests(): Result<List<FriendRequest>> {
         return try {
             val token = authRepository.getAuthToken() ?: return Result.failure(Exception("Not authenticated"))
-            val response = userApiService.getPendingFriendRequests("Bearer $token")
+            val currentUser = authRepository.getCurrentUser().first() ?: return Result.failure(Exception("User not found"))
+
+            val response = userApiService.getPendingFriendRequests("Bearer $token", currentUser.id)
 
             val requests = response.map { dto ->
                 FriendRequest(
@@ -152,6 +156,31 @@ class FriendRepositoryImpl @Inject constructor(
             } else {
                 Result.failure(Exception("Failed to remove friend: ${e.localizedMessage}"))
             }
+        }
+    }
+
+    override suspend fun getUserById(userId: String): Result<User> {
+        return try {
+            val token = authRepository.getAuthToken() ?: return Result.failure(Exception("Not authenticated"))
+            val response = userApiService.getUserById("Bearer $token", userId)
+
+            val user = User(
+                id = response.id,
+                email = response.email,
+                name = response.name,
+                preferences = response.preferences?.let { gson.fromJson(it, Map::class.java) as? Map<String, Any> },
+                subscriptionStatus = response.subscriptionStatus ?: false,
+                location = response.location?.let {
+                    com.example.universe.domain.models.Location(
+                        latitude = it.latitude,
+                        longitude = it.longitude
+                    )
+                }
+            )
+
+            Result.success(user)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to get user: ${e.message}"))
         }
     }
 }

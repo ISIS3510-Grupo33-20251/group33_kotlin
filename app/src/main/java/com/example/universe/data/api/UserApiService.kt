@@ -7,8 +7,17 @@ import com.example.universe.domain.models.Location
 import retrofit2.http.*
 
 interface UserApiService {
-    @GET("users/friends")
-    suspend fun getFriends(@Header("Authorization") token: String): List<UserDto>
+    @GET("users/{userId}/friends")
+    suspend fun getFriends(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String
+    ): List<UserDto>
+
+    @GET("friend_requests/pending/{userId}")
+    suspend fun getPendingFriendRequests(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String
+    ): List<FriendRequestDto>
 
     @GET("users/friends/location")
     suspend fun getFriendsWithLocation(@Header("Authorization") token: String): List<UserDto>
@@ -24,9 +33,6 @@ interface UserApiService {
         @Header("Authorization") token: String,
         @Body request: SendFriendRequestDto
     ): okhttp3.ResponseBody
-
-    @GET("friend_requests/pending")
-    suspend fun getPendingFriendRequests(@Header("Authorization") token: String): List<FriendRequestDto>
 
     @POST("friend_requests/{requestId}/accept")
     suspend fun acceptFriendRequest(
@@ -45,4 +51,10 @@ interface UserApiService {
         @Header("Authorization") token: String,
         @Path("friend_id") friendId: String
     )
+
+    @GET("users/{userId}")
+    suspend fun getUserById(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String
+    ): UserDto
 }

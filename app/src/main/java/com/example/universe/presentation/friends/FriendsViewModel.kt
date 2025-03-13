@@ -24,7 +24,15 @@ class FriendsViewModel @Inject constructor(
     private val _friendRequestsState = MutableStateFlow<FriendRequestsState>(FriendRequestsState.Loading)
     val friendRequestsState: StateFlow<FriendRequestsState> = _friendRequestsState.asStateFlow()
 
+    private val _pendingRequestsState = MutableStateFlow<PendingRequestsState>(PendingRequestsState.Loading)
+    val pendingRequestsState: StateFlow<PendingRequestsState> = _pendingRequestsState.asStateFlow()
+
+    private val _requestSenderInfo = MutableStateFlow<Map<String, User>>(emptyMap())
+    val requestSenderInfo: StateFlow<Map<String, User>> = _requestSenderInfo.asStateFlow()
+
     init {
+        loadFriends()
+        loadPendingFriendRequests()
     }
 
     fun loadFriends() {
@@ -40,21 +48,30 @@ class FriendsViewModel @Inject constructor(
         }
     }
 
-    private fun loadFriendRequests() {
+    private fun loadPendingFriendRequests() {
         viewModelScope.launch {
-            _friendRequestsState.value = FriendRequestsState.Loading
+            _pendingRequestsState.value = PendingRequestsState.Loading
             friendRepository.getPendingFriendRequests()
                 .onSuccess { requests ->
-                    _friendRequestsState.value = FriendRequestsState.Success
+                    _pendingRequestsState.value = PendingRequestsState.Success(requests)
+
+                    // Load user info for each request sender
+                    val userMap = mutableMapOf<String, User>()
+                    requests.forEach { request ->
+                        friendRepository.getUserById(request.senderId)
+                            .onSuccess { user ->
+                                userMap[request.senderId] = user
+                                _requestSenderInfo.value = userMap.toMap()
+                            }
+                    }
                 }
                 .onFailure { error ->
-                    _friendRequestsState.value = FriendRequestsState.Error(error.message ?: "Unknown error")
+                    _pendingRequestsState.value = PendingRequestsState.Error(error.message ?: "Failed to load pending friend requests")
                 }
         }
     }
 
     fun sendFriendRequest(email: String) {
-        println("Attempting to send friend request to: $email")
         viewModelScope.launch {
             _friendRequestsState.value = FriendRequestsState.Loading
             friendRepository.sendFriendRequest(email)
@@ -71,7 +88,7 @@ class FriendsViewModel @Inject constructor(
         viewModelScope.launch {
             friendRepository.acceptFriendRequest(requestId)
                 .onSuccess {
-                    loadFriendRequests()
+                    loadPendingFriendRequests()
                     loadFriends()
                 }
                 .onFailure { error ->
@@ -83,7 +100,7 @@ class FriendsViewModel @Inject constructor(
         viewModelScope.launch {
             friendRepository.rejectFriendRequest(requestId)
                 .onSuccess {
-                    loadFriendRequests()
+                    loadPendingFriendRequests()
                 }
                 .onFailure { error ->
                 }
@@ -113,4 +130,10 @@ sealed class FriendRequestsState {
     object Success : FriendRequestsState()
     object Loading : FriendRequestsState()
     data class Error(val message: String) : FriendRequestsState()
+}
+
+sealed class PendingRequestsState {
+    object Loading : PendingRequestsState()
+    data class Success(val requests: List<FriendRequest>) : PendingRequestsState()
+    data class Error(val message: String) : PendingRequestsState()
 }

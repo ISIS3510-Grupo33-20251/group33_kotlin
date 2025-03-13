@@ -1,9 +1,9 @@
 package com.example.universe.domain.models
 
 enum class FriendRequestStatus {
-    PENDING,
-    ACCEPTED,
-    REJECTED
+    pending,
+    accepted,
+    rejected
 }
 
 data class FriendRequest(
@@ -11,5 +11,5 @@ data class FriendRequest(
     val senderId: String,
     val receiverId: String,
     val status: FriendRequestStatus,
-    val createdAt: Long
+    val createdAt: Double
 )

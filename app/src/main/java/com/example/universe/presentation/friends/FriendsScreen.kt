@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,10 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.universe.domain.models.FriendRequest
+import com.example.universe.domain.models.User
 import com.example.universe.presentation.home.Footer
 
 @Composable
@@ -38,21 +42,15 @@ fun FriendsScreen(
     onAssignmentsClick: () -> Unit,
     viewModel: FriendsViewModel = hiltViewModel()
 ) {
-    val friends = listOf(
-        "Alejandro",
-        "Felipe",
-        "Alejandra",
-        "Pablo",
-        "Nicolas",
-        "Juana"
-    )
+    val friendsState by viewModel.friendsState.collectAsState()
+    val pendingRequestsState by viewModel.pendingRequestsState.collectAsState()
+    val friendRequestsState by viewModel.friendRequestsState.collectAsState()
+    val senderInfo by viewModel.requestSenderInfo.collectAsState()
 
     var showAddFriendDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf<String?>(null) }
-
-    val friendRequestsState by viewModel.friendRequestsState.collectAsState()
 
     LaunchedEffect(friendRequestsState) {
         when (friendRequestsState) {
@@ -117,13 +115,56 @@ fun FriendsScreen(
             }
         )
 
-        LazyColumn {
-            items(friends) { friend ->
-                FriendItem(name = friend)
-                Divider(
-                    color = Color.LightGray,
-                    thickness = 1.dp,
-                    modifier = Modifier.padding(start = 72.dp)
+        when (pendingRequestsState) {
+            is PendingRequestsState.Loading -> {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                }
+            }
+            is PendingRequestsState.Success -> {
+                val requests = (pendingRequestsState as PendingRequestsState.Success).requests
+                if (requests.isNotEmpty()) {
+                    PendingFriendRequestsSection(
+                        pendingRequests = requests,
+                        senderInfo = senderInfo,
+                        onAccept = { requestId -> viewModel.acceptFriendRequest(requestId) },
+                        onReject = { requestId -> viewModel.rejectFriendRequest(requestId) }
+                    )
+                }
+            }
+            is PendingRequestsState.Error -> {
+                Text(
+                    text = (pendingRequestsState as PendingRequestsState.Error).message,
+                    color = Color.Red,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+
+        when (friendsState) {
+            is FriendsState.Loading -> {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                }
+            }
+            is FriendsState.Success -> {
+                val friends = (friendsState as FriendsState.Success).friends
+                LazyColumn {
+                    items(friends) { friend ->
+                        FriendItem(name = friend.name)
+                        Divider(
+                            color = Color.LightGray,
+                            thickness = 1.dp,
+                            modifier = Modifier.padding(start = 72.dp)
+                        )
+                    }
+                }
+            }
+            is FriendsState.Error -> {
+                Text(
+                    text = (friendsState as FriendsState.Error).message,
+                    color = Color.Red,
+                    modifier = Modifier.padding(16.dp)
                 )
             }
         }
@@ -275,5 +316,109 @@ fun FriendItem(name: String) {
             fontWeight = FontWeight.Normal,
             modifier = Modifier.padding(start = 16.dp)
         )
+    }
+}
+
+@Composable
+fun PendingFriendRequestsSection(
+    pendingRequests: List<FriendRequest>,
+    senderInfo: Map<String, User>,
+    onAccept: (String) -> Unit,
+    onReject: (String) -> Unit
+) {
+    if (pendingRequests.isEmpty()) return
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Pending Friend Requests",
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        Divider()
+
+        pendingRequests.forEach { request ->
+            PendingFriendRequestItem(
+                requestId = request.id,
+                senderId = request.senderId,
+                senderName = senderInfo[request.senderId]?.name,
+                onAccept = onAccept,
+                onReject = onReject
+            )
+            Divider()
+        }
+    }
+}
+
+@Composable
+fun PendingFriendRequestItem(
+    requestId: String,
+    senderId: String,
+    senderName: String?,
+    onAccept: (String) -> Unit,
+    onReject: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE6E6FA)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = senderName?.firstOrNull()?.toString() ?: "?",
+                    color = Color(0xFF673AB7),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Text(
+                text = "Friend Request from User ${senderName ?: senderId}",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .weight(1f, false)
+            )
+        }
+
+        // Action buttons
+        Row(
+            modifier = Modifier.padding(start = 8.dp)
+        ) {
+            IconButton(onClick = { onReject(requestId) }) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Reject",
+                    tint = Color.Red
+                )
+            }
+
+            IconButton(onClick = { onAccept(requestId) }) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Accept",
+                    tint = Color.Green
+                )
+            }
+        }
     }
 }
