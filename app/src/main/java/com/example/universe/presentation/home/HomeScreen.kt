@@ -1,5 +1,6 @@
 package com.example.universe.presentation.home
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,10 +20,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.universe.presentation.location.LocationViewModel
+import com.example.universe.presentation.location.rememberLocationPermissionState
 
 @Composable
 fun HomeScreen(
@@ -31,66 +37,68 @@ fun HomeScreen(
     onScheduleClick: () -> Unit,
     onAssignmentsClick: () -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+    LocationPermissionHandler ({
+        var showMenu by remember { mutableStateOf(false) }
 
-    Box {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White)
-                .alpha(if (showMenu) 0.7f else 1f)
-        ) {
-            Header(onMenuClick = { showMenu = !showMenu })
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            )
-
-            Footer(
-                onRemindersClick = onRemindersClick,
-                onScheduleClick = onScheduleClick,
-                onAssignmentsClick = onAssignmentsClick
-            )
-        }
-
-        if (showMenu) {
-            Box(
+        Box {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .zIndex(1f)
-                    .clickable { showMenu = false }
+                    .background(Color.White)
+                    .alpha(if (showMenu) 0.7f else 1f)
             ) {
-                SideMenu(
+                Header(onMenuClick = { showMenu = !showMenu })
+
+                Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 72.dp)
-                        .width(200.dp),
-                    onFriendsClick = {
-                        onFriendsClick()
-                        showMenu = false
-                    },
-                    onShareClick = {
-                        // Handle share action
-                        showMenu = false
-                    },
-                    onSettingsClick = {
-                        // Navigate to settings
-                        showMenu = false
-                    },
-                    onGuideClick = {
-                        // Navigate to guide
-                        showMenu = false
-                    },
-                    onLogoutClick = {
-                        onLogoutClick()
-                        showMenu = false
-                    }
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
+
+                Footer(
+                    onRemindersClick = onRemindersClick,
+                    onScheduleClick = onScheduleClick,
+                    onAssignmentsClick = onAssignmentsClick
                 )
             }
+
+            if (showMenu) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(1f)
+                        .clickable { showMenu = false }
+                ) {
+                    SideMenu(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 72.dp)
+                            .width(200.dp),
+                        onFriendsClick = {
+                            onFriendsClick()
+                            showMenu = false
+                        },
+                        onShareClick = {
+                            // Handle share action
+                            showMenu = false
+                        },
+                        onSettingsClick = {
+                            // Navigate to settings
+                            showMenu = false
+                        },
+                        onGuideClick = {
+                            // Navigate to guide
+                            showMenu = false
+                        },
+                        onLogoutClick = {
+                            onLogoutClick()
+                            showMenu = false
+                        }
+                    )
+                }
+            }
         }
-    }
+    })
 }
 
 @Composable
@@ -265,6 +273,38 @@ fun NavigationItem(
                     .height(2.dp)
                     .background(Color.White)
             )
+        }
+    }
+}
+
+@Composable
+fun LocationPermissionHandler(
+    content: @Composable () -> Unit,
+    locationViewModel: LocationViewModel = hiltViewModel()
+) {
+    val context = LocalContext.current
+    val permissionState = rememberLocationPermissionState()
+
+    LaunchedEffect(permissionState.hasPermission) {
+        if (permissionState.hasPermission) {
+            Log.d("LocationPermission", "Permission granted, starting location updates")
+            locationViewModel.startLocationUpdates()
+        }
+    }
+
+    if (permissionState.hasPermission) {
+        content()
+    } else {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Location permission is required for this feature")
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = { permissionState.requestPermission() }) {
+                Text("Request permission")
+            }
         }
     }
 }

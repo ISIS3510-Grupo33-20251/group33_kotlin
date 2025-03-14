@@ -105,7 +105,7 @@ fun LoginScreen(
             // Email field
             Box(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Email or Username",
+                    text = "Email",
                     color = Color.DarkGray,
                     style = MaterialTheme.typography.caption,
                     modifier = Modifier.align(Alignment.CenterStart)

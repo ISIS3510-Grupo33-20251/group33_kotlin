@@ -1,6 +1,7 @@
 package com.example.universe.data.repositories
 
 import android.content.SharedPreferences
+import android.util.Log
 import com.example.universe.data.api.UserApiService
 import com.example.universe.data.models.FriendRequestDto
 import com.example.universe.data.models.SendFriendRequestDto
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import retrofit2.HttpException
 import javax.inject.Inject
+import com.google.gson.JsonObject
+import com.google.gson.reflect.TypeToken
 
 class FriendRepositoryImpl @Inject constructor(
     private val userApiService: UserApiService,
@@ -163,12 +166,26 @@ class FriendRepositoryImpl @Inject constructor(
         return try {
             val token = authRepository.getAuthToken() ?: return Result.failure(Exception("Not authenticated"))
             val response = userApiService.getUserById("Bearer $token", userId)
+            Log.d("FriendRepo", "Received user data: $response")
+
+            val preferencesMap: Map<String, Any>? = if (response.preferences != null) {
+                try {
+                    // Convert JsonObject to Map using a more explicit approach
+                    val type = object : TypeToken<Map<String, Any>>() {}.type
+                    gson.fromJson<Map<String, Any>>(response.preferences.toString(), type)
+                } catch (e: Exception) {
+                    Log.e("FriendRepo", "Error parsing preferences", e)
+                    null
+                }
+            } else {
+                null
+            }
 
             val user = User(
                 id = response.id,
                 email = response.email,
                 name = response.name,
-                preferences = response.preferences?.let { gson.fromJson(it, Map::class.java) as? Map<String, Any> },
+                preferences = preferencesMap,
                 subscriptionStatus = response.subscriptionStatus ?: false,
                 location = response.location?.let {
                     com.example.universe.domain.models.Location(
@@ -177,6 +194,7 @@ class FriendRepositoryImpl @Inject constructor(
                     )
                 }
             )
+            Log.d("FriendRepo", "Mapped user: $user")
 
             Result.success(user)
         } catch (e: Exception) {

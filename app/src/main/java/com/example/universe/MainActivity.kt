@@ -9,6 +9,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -25,6 +26,7 @@ import com.example.universe.presentation.auth.RegisterScreen
 import com.example.universe.presentation.WelcomeScreen
 import com.example.universe.presentation.friends.FriendsScreen
 import com.example.universe.presentation.home.HomeScreen
+import com.example.universe.presentation.location.LocationViewModel
 import com.example.universe.ui.theme.UniverseTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -40,7 +42,15 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     val authViewModel: AuthViewModel = hiltViewModel()
+                    val locationViewModel: LocationViewModel = hiltViewModel()
                     val authState by authViewModel.authState.collectAsState()
+
+                    // Start location updates if user is authenticated
+                    LaunchedEffect(authState) {
+                        if (authState is AuthState.Authenticated) {
+                            locationViewModel.startLocationUpdates()
+                        }
+                    }
 
                     AppNavHost(
                         navController = navController,

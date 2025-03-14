@@ -1,21 +1,30 @@
 package com.example.universe.presentation.friends
 
+import LocationUtils
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.universe.domain.models.FriendRequest
+import com.example.universe.domain.models.Location
 import com.example.universe.domain.models.User
 import com.example.universe.domain.repositories.FriendRepository
+import com.example.universe.domain.repositories.LocationRepository
+import com.example.universe.presentation.location.FriendWithDistance
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class FriendsViewModel @Inject constructor(
-    private val friendRepository: FriendRepository
+    private val friendRepository: FriendRepository,
+    private val locationRepository: LocationRepository
 ) : ViewModel() {
 
     private val _friendsState = MutableStateFlow<FriendsState>(FriendsState.Loading)
@@ -30,9 +39,26 @@ class FriendsViewModel @Inject constructor(
     private val _requestSenderInfo = MutableStateFlow<Map<String, User>>(emptyMap())
     val requestSenderInfo: StateFlow<Map<String, User>> = _requestSenderInfo.asStateFlow()
 
+    private val _friendsWithLocation = MutableStateFlow<List<FriendWithDistance>>(emptyList())
+    val friendsWithLocation: StateFlow<List<FriendWithDistance>> = _friendsWithLocation.asStateFlow()
+
+    private val _currentLocation = MutableStateFlow<Location?>(null)
+    val currentLocation: StateFlow<Location?> = _currentLocation.asStateFlow()
+
+    private val _friendInfoMap = MutableStateFlow<Map<String, User>>(emptyMap())
+    val friendInfoMap: StateFlow<Map<String, User>> = _friendInfoMap.asStateFlow()
+
     init {
         loadFriends()
         loadPendingFriendRequests()
+        locationRepository.getCurrentLocation()
+            .onEach { currentLocation ->
+                _currentLocation.value = currentLocation
+                if (currentLocation != null) {
+                    updateFriendsWithLocation(currentLocation)
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun loadFriends() {
@@ -58,11 +84,21 @@ class FriendsViewModel @Inject constructor(
                     // Load user info for each request sender
                     val userMap = mutableMapOf<String, User>()
                     requests.forEach { request ->
-                        friendRepository.getUserById(request.senderId)
-                            .onSuccess { user ->
-                                userMap[request.senderId] = user
-                                _requestSenderInfo.value = userMap.toMap()
-                            }
+                        launch {
+                            Log.d("FriendsVM", "Loading user data for sender: ${request.senderId}")
+                            friendRepository.getUserById(request.senderId)
+                                .onSuccess { user ->
+                                    Log.d("FriendsVM", "Successfully loaded user: ${user.name} for ID: ${request.senderId}")
+
+                                    synchronized(userMap) {
+                                        userMap[request.senderId] = user
+                                        _requestSenderInfo.value = HashMap(userMap)
+                                    }
+                                }
+                                .onFailure { error ->
+                                    Log.e("FriendsVM", "Failed to load user data for sender: ${request.senderId}, Error: ${error.message}")
+                                }
+                        }
                     }
                 }
                 .onFailure { error ->
@@ -116,6 +152,68 @@ class FriendsViewModel @Inject constructor(
                 .onFailure { error ->
                 }
         }
+    }
+
+    private fun updateFriendsWithLocation(currentLocation: Location) {
+        viewModelScope.launch {
+            locationRepository.getFriendLocations()
+                .onSuccess { friendLocations ->
+                    val friendsWithDist = friendLocations.map { (friendId, location) ->
+                        val distance = LocationUtils.calculateDistance(
+                            currentLocation.latitude, currentLocation.longitude,
+                            location.latitude, location.longitude
+                        )
+                        FriendWithDistance(friendId, location, distance)
+                    }.sortedBy { it.distance }
+                    _friendsWithLocation.value = friendsWithDist
+                }
+        }
+    }
+
+    fun loadFriendsWithLocation() {
+        viewModelScope.launch {
+            Log.d("FriendsViewModel", "Loading friends with location")
+            locationRepository.getFriendLocations()
+                .onSuccess { friendLocations ->
+                    Log.d("FriendsViewModel", "Got ${friendLocations.size} friend locations")
+                    val currentLoc = _currentLocation.value
+                    if (currentLoc != null && friendLocations.isNotEmpty()) {
+                        updateFriendsWithDistance(currentLoc, friendLocations)
+
+                        // Fetch user info for each friend with location
+                        for (friendId in friendLocations.keys) {
+                            friendRepository.getUserById(friendId)
+                                .onSuccess { user ->
+                                    Log.d("FriendsViewModel", "Loaded user info for $friendId: ${user.name}")
+                                    // Update the map with the new user info
+                                    _friendInfoMap.update { currentMap ->
+                                        currentMap.toMutableMap().apply {
+                                            put(friendId, user)
+                                        }
+                                    }
+                                }
+                                .onFailure { error ->
+                                    Log.e("FriendsViewModel", "Failed to load user for $friendId: ${error.message}")
+                                }
+                        }
+                    }
+                }
+                .onFailure { error ->
+                    Log.e("FriendsViewModel", "Failed to load friend locations", error)
+                }
+        }
+    }
+
+    private fun updateFriendsWithDistance(currentLocation: Location, friendLocations: Map<String, Location>) {
+        val friendsWithDist = friendLocations.map { (friendId, location) ->
+            val distance = LocationUtils.calculateDistance(
+                currentLocation.latitude, currentLocation.longitude,
+                location.latitude, location.longitude
+            )
+            FriendWithDistance(friendId, location, distance)
+        }.sortedBy { it.distance }
+
+        _friendsWithLocation.value = friendsWithDist
     }
 }
 

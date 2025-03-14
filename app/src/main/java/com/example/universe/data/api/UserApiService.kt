@@ -19,12 +19,16 @@ interface UserApiService {
         @Path("userId") userId: String
     ): List<FriendRequestDto>
 
-    @GET("users/friends/location")
-    suspend fun getFriendsWithLocation(@Header("Authorization") token: String): List<UserDto>
+    @GET("users/{userId}/friends/location")
+    suspend fun getFriendsWithLocation(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String
+    ): List<UserDto>
 
-    @PUT("users/location")
+    @PUT("users/{user_id}/location")
     suspend fun updateLocation(
         @Header("Authorization") token: String,
+        @Path("user_id") userId: String,
         @Body location: Location
     )
 

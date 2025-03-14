@@ -9,7 +9,7 @@ data class UserDto(
     val name: String,
     val email: String,
     val password: String,
-    val preferences: String? = null,  // JSON string of preferences
+    val preferences: JsonObject? = null,  // JSON string of preferences
     @SerializedName("subscription_status")
     val subscriptionStatus: Boolean? = false,
     val location: LocationDto? = null,
