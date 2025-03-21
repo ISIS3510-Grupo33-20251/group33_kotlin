@@ -238,6 +238,7 @@ fun FriendsScreen(
         }
 
         Footer(
+            selectedScreen = "schedule",
             onRemindersClick = onRemindersClick,
             onScheduleClick = onScheduleClick,
             onAssignmentsClick = onAssignmentsClick
