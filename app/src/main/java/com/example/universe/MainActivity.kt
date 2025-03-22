@@ -29,6 +29,7 @@ import com.example.universe.presentation.home.HomeScreen
 import com.example.universe.presentation.location.LocationViewModel
 import com.example.universe.ui.theme.UniverseTheme
 import com.example.universe.presentation.assignments.AssignmentsScreen
+import com.example.universe.presentation.assignments.FlashcardsScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 
@@ -134,8 +135,13 @@ fun AppNavHost(
             AssignmentsScreen(
                 onRemindersClick = { navController.navigate("reminders") },
                 onScheduleClick = { navController.navigate("home") },
-                onAssignmentsClick = { navController.navigate("assignments") }
+                onAssignmentsClick = { navController.navigate("assignments") },
+                onFlashcardsClick = { navController.navigate("flashcards") }
             )
+        }
+
+        composable("flashcards") {
+            FlashcardsScreen()
         }
     }
 }

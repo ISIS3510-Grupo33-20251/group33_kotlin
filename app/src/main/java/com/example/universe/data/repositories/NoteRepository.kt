@@ -3,8 +3,11 @@ package com.example.universe.data.repositories
 import com.example.universe.data.api.NoteApiService
 import com.example.universe.data.models.NoteDto
 import retrofit2.Response
+import javax.inject.Inject
 
-class NoteRepository(private val api: NoteApiService) {
+
+class NoteRepository @Inject constructor(
+    private val api: NoteApiService) {
 
     suspend fun getNotes(): Response<List<NoteDto>> {
         return api.getNotes()
