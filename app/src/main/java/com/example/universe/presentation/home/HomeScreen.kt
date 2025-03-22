@@ -56,6 +56,7 @@ fun HomeScreen(
                 )
 
                 Footer(
+                    selectedScreen = "home",
                     onRemindersClick = onRemindersClick,
                     onScheduleClick = onScheduleClick,
                     onAssignmentsClick = onAssignmentsClick
@@ -192,6 +193,7 @@ fun Header(onMenuClick: () -> Unit) {
 
 @Composable
 fun Footer(
+    selectedScreen: String,
     onRemindersClick: () -> Unit,
     onScheduleClick: () -> Unit,
     onAssignmentsClick: () -> Unit
@@ -223,7 +225,7 @@ fun Footer(
                 icon = Icons.Filled.DateRange,
                 label = "Schedule",
                 onClick = onScheduleClick,
-                isSelected = true
+                isSelected = selectedScreen == "home"
             )
 
             // Assignments
@@ -231,7 +233,7 @@ fun Footer(
                 icon = Icons.Outlined.List,
                 label = "Assignments",
                 onClick = onAssignmentsClick,
-                isSelected = false
+                isSelected = selectedScreen == "assignments"
             )
         }
     }

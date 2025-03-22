@@ -28,7 +28,10 @@ import com.example.universe.presentation.friends.FriendsScreen
 import com.example.universe.presentation.home.HomeScreen
 import com.example.universe.presentation.location.LocationViewModel
 import com.example.universe.ui.theme.UniverseTheme
+import com.example.universe.presentation.assignments.AssignmentsScreen
+import com.example.universe.presentation.assignments.FlashcardsScreen
 import dagger.hilt.android.AndroidEntryPoint
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -129,11 +132,16 @@ fun AppNavHost(
         }
 
         composable("assignments") {
-            // Assignments screen will go here
-            // For now, just show a text indicating this is the assignments screen
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Assignments Screen")
-            }
+            AssignmentsScreen(
+                onRemindersClick = { navController.navigate("reminders") },
+                onScheduleClick = { navController.navigate("home") },
+                onAssignmentsClick = { navController.navigate("assignments") },
+                onFlashcardsClick = { navController.navigate("flashcards") }
+            )
+        }
+
+        composable("flashcards") {
+            FlashcardsScreen(onBackClick = { navController.popBackStack() })
         }
     }
 }
