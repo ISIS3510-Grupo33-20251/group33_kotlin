@@ -162,7 +162,7 @@ fun AssignmentsScreen(
             // Nuevo botón con estrella
             FloatingActionButton(
                 onClick = { onFlashcardsClick()
-                    // Acción del botón estrella (puede marcar como favorito en el futuro)
+                    // Acción del botón estrella
                 },
                 backgroundColor = Color.Black,
                 contentColor = Color.White,

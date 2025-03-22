@@ -141,7 +141,7 @@ fun AppNavHost(
         }
 
         composable("flashcards") {
-            FlashcardsScreen()
+            FlashcardsScreen(onBackClick = { navController.popBackStack() })
         }
     }
 }
