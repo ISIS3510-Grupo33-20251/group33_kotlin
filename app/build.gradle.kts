@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.universe"  // Add this line
+    namespace = "com.example.universe"
     compileSdk = 33
 
     defaultConfig {
@@ -31,6 +31,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -109,4 +110,7 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:$composeVersion")
     debugImplementation("androidx.compose.ui:ui-tooling:$composeVersion")
+
+    // Add the desugaring library
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.1.5")
 }

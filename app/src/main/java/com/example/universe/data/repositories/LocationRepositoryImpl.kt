@@ -12,6 +12,8 @@ import com.google.android.gms.location.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -24,6 +26,8 @@ class LocationRepositoryImpl @Inject constructor(
     private val userApiService: UserApiService
 ) : LocationRepository {
 
+    private val _friendLocationsCache = MutableStateFlow<Map<String, AppLocation>>(emptyMap())
+
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
 
@@ -35,7 +39,7 @@ class LocationRepositoryImpl @Inject constructor(
 
     private var locationCallback: LocationCallback? = null
 
-    @SuppressLint("MissingPermission") // Permission should be checked before calling
+    @SuppressLint("MissingPermission")
     override fun getCurrentLocation(): Flow<AppLocation?> = callbackFlow {
         val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
@@ -72,7 +76,7 @@ class LocationRepositoryImpl @Inject constructor(
         }
     }
 
-    @SuppressLint("MissingPermission") // Permission should be checked before calling
+    @SuppressLint("MissingPermission")
     override fun startLocationUpdates() {
         Log.d("LocationRepo", "Starting location updates")
         locationCallback?.let { callback ->
@@ -105,6 +109,11 @@ class LocationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getFriendLocations(): Result<Map<String, AppLocation>> {
+        // Use cached data if available
+        if (_friendLocationsCache.value.isNotEmpty()) {
+            return Result.success(_friendLocationsCache.value)
+        }
+
         return try {
             val token = authRepository.getAuthToken() ?: return Result.failure(Exception("Not authenticated"))
             val currentUser = authRepository.getCurrentUser().first() ?: return Result.failure(Exception("User not found"))
@@ -128,10 +137,15 @@ class LocationRepositoryImpl @Inject constructor(
                 }
             }
 
+            // Update cache with new data
+            _friendLocationsCache.value = locationMap
             Result.success(locationMap)
         } catch (e: Exception) {
             Log.e("LocationRepo", "Error getting friend locations", e)
             Result.failure(e)
         }
     }
+
+    fun getFriendLocationsStream(): Flow<Map<String, AppLocation>> = _friendLocationsCache.asStateFlow()
+
 }

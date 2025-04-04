@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,7 +36,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.universe.domain.models.FriendRequest
 import com.example.universe.domain.models.User
 import com.example.universe.presentation.home.Footer
-import com.example.universe.presentation.location.FriendWithDistance
 import com.example.universe.presentation.location.LocationViewModel
 
 @Composable
@@ -56,13 +57,14 @@ fun FriendsScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf<String?>(null) }
+    val error by viewModel.error.collectAsState()
 
     val friendInfoMap by viewModel.friendInfoMap.collectAsState()
 
-    val friendsWithLocation by viewModel.friendsWithLocation.collectAsState()
+    val friendsWithLocationAndInfo by locationViewModel.friendsWithLocationAndInfo.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.loadFriendsWithLocation()
+        locationViewModel.loadFriendLocations()
     }
 
     LaunchedEffect(friendRequestsState) {
@@ -79,10 +81,10 @@ fun FriendsScreen(
         }
     }
 
-    LaunchedEffect(friendsWithLocation) {
-        Log.d("FriendsScreen", "Friends with location size: ${friendsWithLocation.size}")
-        friendsWithLocation.forEach { friend ->
-            Log.d("FriendsScreen", "Friend with distance: ${friend.userId}, distance: ${friend.distance}")
+    LaunchedEffect(friendsWithLocationAndInfo) {
+        Log.d("FriendsScreen", "Friends with location size: ${friendsWithLocationAndInfo.size}")
+        friendsWithLocationAndInfo.forEach { friend ->
+            Log.d("FriendsScreen", "Friend with distance: ${friend.user.name}, distance: ${friend.distance}")
         }
     }
 
@@ -170,7 +172,7 @@ fun FriendsScreen(
                 }
 
                 // Conditional content for nearby friends
-                if (friendsWithLocation.isEmpty()) {
+                if (friendsWithLocationAndInfo.isEmpty()) {
                     item {
                         Text(
                             text = "No friends with active location",
@@ -181,26 +183,16 @@ fun FriendsScreen(
                     }
                 } else {
                     // Nearby Friends section
-                    items(friendsWithLocation) { friendWithDistance ->
-                        Log.d("FriendsScreen", "Rendering friend ${friendWithDistance.userId}")
-                        val friend = friendInfoMap[friendWithDistance.userId]
-                        if (friend != null) {
-                            FriendDistanceItem(
-                                name = friend.name,
-                                distance = LocationUtils.formatDistance(friendWithDistance.distance),
-                                onClick = { /* Handle friend click */ }
-                            )
-                            Divider()
-                        } else {
-                            // This will help us understand if the senderInfo map has the friend data
-                            Log.d("FriendsScreen", "No user info for ${friendWithDistance.userId}")
-                            Text(
-                                text = "User ${friendWithDistance.userId} - ${LocationUtils.formatDistance(friendWithDistance.distance)}",
-                                modifier = Modifier.padding(16.dp)
-                            )
-                            Divider()
-                        }
+                    items(friendsWithLocationAndInfo) { friendInfo ->
+                        FriendDistanceItem(
+                            name = friendInfo.user.name,
+                            distance = LocationUtils.formatDistance(friendInfo.distance),
+                            onClick = { /* Handle friend click */ }
+                        )
+                        Divider()
                     }
+
+
                 }
 
                 // All friends section
@@ -234,6 +226,36 @@ fun FriendsScreen(
                         .size(50.dp)
                         .align(Alignment.Center)
                 )
+            }
+
+            // Show error message (like offline mode)
+            if (error != null) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp),
+                    color = Color(0xFFFFF3CD),
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = "Warning",
+                            tint = Color(0xFF856404),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = error ?: "",
+                            color = Color(0xFF856404),
+                            style = MaterialTheme.typography.body2
+                        )
+                    }
+                }
             }
         }
 
@@ -490,27 +512,6 @@ fun PendingFriendRequestItem(
                     contentDescription = "Accept",
                     tint = Color.Green
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun FriendsListByDistance(
-    friendsWithDistance: List<FriendWithDistance>,
-    userInfo: Map<String, User>,
-    onFriendClick: (String) -> Unit
-) {
-    LazyColumn {
-        items(friendsWithDistance) { friendWithDistance ->
-            val friend = userInfo[friendWithDistance.userId]
-            if (friend != null) {
-                FriendDistanceItem(
-                    name = friend.name,
-                    distance = LocationUtils.formatDistance(friendWithDistance.distance),
-                    onClick = { onFriendClick(friendWithDistance.userId) }
-                )
-                Divider()
             }
         }
     }
