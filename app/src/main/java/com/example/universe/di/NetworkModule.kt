@@ -1,17 +1,24 @@
 package com.example.universe.di
 
+import android.content.Context
+import android.net.ConnectivityManager
 import com.example.universe.data.api.AuthApiService
+import com.example.universe.data.api.MeetingApiService
 import com.example.universe.data.api.UserApiService
 import com.example.universe.data.api.NoteApiService
+import com.example.universe.data.repositories.NetworkConnectivityObserverImpl
+import com.example.universe.domain.repositories.NetworkConnectivityObserver
 import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -31,7 +38,24 @@ object NetworkModule {
 
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
             .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideConnectivityManager(@ApplicationContext context: Context): ConnectivityManager {
+        return context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+
+    @Provides
+    @Singleton
+    fun provideNetworkConnectivityObserver(
+        @ApplicationContext context: Context
+    ): NetworkConnectivityObserver {
+        return NetworkConnectivityObserverImpl(context)
     }
 
     @Provides
@@ -62,5 +86,10 @@ object NetworkModule {
         return retrofit.create(NoteApiService::class.java)
     }
 
+    @Provides
+    @Singleton
+    fun provideMeetingApiService(retrofit: Retrofit): MeetingApiService {
+        return retrofit.create(MeetingApiService::class.java)
+    }
 
 }

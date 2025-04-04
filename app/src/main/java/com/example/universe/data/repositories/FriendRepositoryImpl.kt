@@ -3,8 +3,11 @@ package com.example.universe.data.repositories
 import android.content.SharedPreferences
 import android.util.Log
 import com.example.universe.data.api.UserApiService
+import com.example.universe.data.db.dao.FriendDao
+import com.example.universe.data.db.entity.FriendEntity
 import com.example.universe.data.models.FriendRequestDto
 import com.example.universe.data.models.SendFriendRequestDto
+import com.example.universe.di.IoDispatcher
 import com.example.universe.domain.models.FriendRequest
 import com.example.universe.domain.models.FriendRequestStatus
 import com.example.universe.domain.models.User
@@ -17,20 +20,106 @@ import retrofit2.HttpException
 import javax.inject.Inject
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class FriendRepositoryImpl @Inject constructor(
     private val userApiService: UserApiService,
     private val authRepository: AuthRepository,
     private val sharedPreferences: SharedPreferences,
-    private val gson: Gson
+    private val friendDao: FriendDao,
+    private val gson: Gson,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : FriendRepository {
 
-    override suspend fun getFriends(): Result<List<User>> {
+    // MutableStateFlow to cache friends
+    private val _friendsCache = MutableStateFlow<List<User>>(emptyList())
+    private val _offlineMode = MutableStateFlow(false)
+
+    private val coroutineScope = CoroutineScope(ioDispatcher)
+
+    init {
+        // Try to load cached friends from database on initialization
+        coroutineScope.launch {
+            try {
+                val localFriends = friendDao.getAllFriends()
+                if (localFriends.isNotEmpty()) {
+                    Log.d("FriendRepo", "Loaded ${localFriends.size} friends from local database")
+                    val friends = localFriends.map { entity ->
+                        User(
+                            id = entity.id,
+                            email = entity.email,
+                            name = entity.name,
+                            subscriptionStatus = entity.subscriptionStatus,
+                            preferences = entity.preferences?.let { gson.fromJson(it, Map::class.java) as? Map<String, Any> },
+                        )
+                    }
+                    _friendsCache.value = friends
+                }
+            } catch (e: Exception) {
+                Log.e("FriendRepo", "Error loading friends from database", e)
+            }
+        }
+    }
+
+    override suspend fun getFriends(localOnly: Boolean): Result<List<User>> {
+        // Check cache first
+        val cachedFriends = _friendsCache.value
+        if (cachedFriends.isNotEmpty()) {
+            // If not in local mode, refresh in background
+            if (!localOnly) {
+                coroutineScope.launch {
+                    try {
+                        refreshFriendsFromNetwork()
+                    } catch (e: Exception) {
+                        Log.e("FriendRepo", "Background refresh failed", e)
+                    }
+                }
+            }
+            return Result.success(cachedFriends)
+        }
+
+        // If in local mode, try database
+        if (localOnly) {
+            try {
+                val localFriends = friendDao.getAllFriends()
+                if (localFriends.isNotEmpty()) {
+                    Log.d(
+                        "FriendRepo",
+                        "Returning ${localFriends.size} friends from database (local only)"
+                    )
+                    val friends = localFriends.map { entity ->
+                        User(
+                            id = entity.id,
+                            email = entity.email,
+                            name = entity.name,
+                            subscriptionStatus = entity.subscriptionStatus,
+                        )
+                    }
+                    _friendsCache.value = friends
+                    return Result.success(friends)
+                }
+                return Result.success(emptyList())
+            } catch (e: Exception) {
+                Log.e("FriendRepo", "Error fetching friends from database", e)
+                return Result.failure(Exception("Failed to get friends from local storage"))
+            }
+        }
+
+        return refreshFriendsFromNetwork()
+    }
+
+    private suspend fun refreshFriendsFromNetwork(): Result<List<User>> {
         return try {
             val token = authRepository.getAuthToken() ?: return Result.failure(Exception("Not authenticated"))
             val currentUser = authRepository.getCurrentUser().first() ?: return Result.failure(Exception("User not found"))
 
             val response = userApiService.getFriends("Bearer $token", currentUser.id)
+            Log.d("FriendRepo", "Fetched ${response.size} friends from network")
 
             val friends = response.map { userDto ->
                 User(
@@ -50,8 +139,15 @@ class FriendRepositoryImpl @Inject constructor(
                 )
             }
 
+            // Update cache
+            _friendsCache.value = friends
+
+            // Store in room database
+            storeFriendsInDatabase(friends)
+
             Result.success(friends)
         } catch (e: Exception) {
+            Log.e("FriendRepo", "Error fetching friends from network", e)
             if (e is HttpException) {
                 Result.failure(Exception("Failed to get friends: ${e.message()}"))
             } else {
@@ -59,6 +155,34 @@ class FriendRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    private suspend fun storeFriendsInDatabase(friends: List<User>) {
+        try {
+            val entities = friends.map { user ->
+                FriendEntity(
+                    id = user.id,
+                    name = user.name,
+                    email = user.email,
+                    preferences = user.preferences?.let { gson.toJson(it) },
+                    subscriptionStatus = user.subscriptionStatus,
+                    lastUpdated = System.currentTimeMillis()
+                )
+            }
+
+            friendDao.insertAll(entities)
+            Log.d("FriendRepo", "Stored ${entities.size} friends in database")
+        } catch (e: Exception) {
+            Log.e("FriendRepo", "Error storing friends in database", e)
+        }
+    }
+
+    override fun getFriendsStream(): Flow<List<User>> = _friendsCache.asStateFlow()
+
+    override fun setOfflineMode(offline: Boolean) {
+        _offlineMode.value = offline
+    }
+
+    override fun isOfflineMode(): Flow<Boolean> = _offlineMode.asStateFlow()
 
     override suspend fun sendFriendRequest(email: String): Result<Unit> {
         return try {
@@ -78,12 +202,12 @@ class FriendRepositoryImpl @Inject constructor(
 
             val request = SendFriendRequestDto(senderId, email)
 
-            println("Sending friend request: $request") // Add logging
+            println("Sending friend request: $request")
 
             userApiService.sendFriendRequest("Bearer $token", request)
             Result.success(Unit)
         } catch (e: Exception) {
-            println("Friend request error: ${e.message}") // Add logging
+            println("Friend request error: ${e.message}")
             e.printStackTrace() // Print stack trace
             if (e is HttpException && e.code() == 404) {
                 Result.failure(Exception("User not found"))
@@ -170,7 +294,6 @@ class FriendRepositoryImpl @Inject constructor(
 
             val preferencesMap: Map<String, Any>? = if (response.preferences != null) {
                 try {
-                    // Convert JsonObject to Map using a more explicit approach
                     val type = object : TypeToken<Map<String, Any>>() {}.type
                     gson.fromJson<Map<String, Any>>(response.preferences.toString(), type)
                 } catch (e: Exception) {

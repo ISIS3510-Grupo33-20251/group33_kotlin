@@ -3,7 +3,9 @@ package com.example.universe.presentation.location
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.universe.domain.models.FriendWithDistanceAndInfo
 import com.example.universe.domain.models.Location
+import com.example.universe.domain.repositories.FriendLocationRepository
 import com.example.universe.domain.repositories.LocationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -12,20 +14,19 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LocationViewModel @Inject constructor(
-    private val locationRepository: LocationRepository
+    private val locationRepository: LocationRepository,
+    private val friendLocationRepository: FriendLocationRepository
 ) : ViewModel() {
 
     private val _currentLocation = MutableStateFlow<Location?>(null)
     val currentLocation: StateFlow<Location?> = _currentLocation.asStateFlow()
 
-    private val _friendLocations = MutableStateFlow<Map<String, Location>>(emptyMap())
-    val friendLocations: StateFlow<Map<String, Location>> = _friendLocations.asStateFlow()
-
     private val _locationUpdatesEnabled = MutableStateFlow(false)
     val locationUpdatesEnabled: StateFlow<Boolean> = _locationUpdatesEnabled.asStateFlow()
 
-    private val _friendsWithDistance = MutableStateFlow<List<FriendWithDistance>>(emptyList())
-    val friendsWithDistance: StateFlow<List<FriendWithDistance>> = _friendsWithDistance.asStateFlow()
+    // Get the combined friend location info directly from the repository
+    val friendsWithLocationAndInfo = friendLocationRepository.getFriendsWithLocationAndInfo()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     init {
         locationRepository.getCurrentLocation()
@@ -41,15 +42,6 @@ class LocationViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
-
-        combine(_currentLocation, _friendLocations) { myLocation, friendLocations ->
-            Pair(myLocation, friendLocations)
-        }.onEach { (myLocation, _) ->
-            if (myLocation != null) {
-                updateFriendsWithDistance()
-            }
-        }.launchIn(viewModelScope)
-
     }
 
     fun startLocationUpdates() {
@@ -70,12 +62,7 @@ class LocationViewModel @Inject constructor(
 
     fun loadFriendLocations() {
         viewModelScope.launch {
-            locationRepository.getFriendLocations()
-                .onSuccess { locations ->
-                    _friendLocations.value = locations
-                }
-                .onFailure { error ->
-                }
+            friendLocationRepository.loadFriendsWithLocation()
         }
     }
 
@@ -89,30 +76,8 @@ class LocationViewModel @Inject constructor(
         }
     }
 
-    fun updateFriendsWithDistance() {
-        viewModelScope.launch {
-            val currentLoc = _currentLocation.value ?: return@launch
-            val friendLocs = _friendLocations.value
-
-            val friendsWithDist = friendLocs.map { (friendId, location) ->
-                val distance = LocationUtils.calculateDistance(
-                    currentLoc.latitude, currentLoc.longitude,
-                    location.latitude, location.longitude
-                )
-                FriendWithDistance(friendId, location, distance)
-            }.sortedBy { it.distance }
-            _friendsWithDistance.value = friendsWithDist
-        }
-    }
-
     override fun onCleared() {
         super.onCleared()
         locationRepository.stopLocationUpdates()
     }
 }
-
-data class FriendWithDistance(
-    val userId: String,
-    val location: Location,
-    val distance: Float
-)
