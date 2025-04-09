@@ -29,11 +29,21 @@ fun RegisterScreen(
 ) {
     val registerState by viewModel.registerState.collectAsState()
     val authState by viewModel.authState.collectAsState()
+    val offlineMode by viewModel.offlineMode.collectAsState()
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(offlineMode) {
+        if (offlineMode) {
+            errorMessage = "You are offline. Registration requires an internet connection. Please check your internet connection and restart the app."
+        } else if (errorMessage == "You are offline. Registration requires an internet connection.") {
+            // Clear the offline error message when back online
+            errorMessage = ""
+        }
+    }
 
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
@@ -198,7 +208,9 @@ fun RegisterScreen(
             // Register button
             Button(
                 onClick = {
-                    if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty()) {
+                    if (offlineMode) {
+                        errorMessage = "You are offline. Registration requires an internet connection. Please check your internet connection and restart the app."
+                    } else if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty()) {
                         viewModel.register(name, email, password)
                     } else {
                         errorMessage = "Please fill in all fields"
@@ -212,7 +224,7 @@ fun RegisterScreen(
                     contentColor = Color.White
                 ),
                 shape = RoundedCornerShape(8.dp),
-                enabled = registerState !is RegisterState.Loading
+                enabled = !offlineMode && registerState !is RegisterState.Loading
             ) {
                 if (registerState is RegisterState.Loading) {
                     CircularProgressIndicator(

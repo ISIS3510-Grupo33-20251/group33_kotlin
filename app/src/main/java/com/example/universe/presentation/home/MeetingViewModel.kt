@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.universe.domain.models.Meeting
 import com.example.universe.domain.repositories.MeetingRepository
+import com.example.universe.domain.repositories.ScheduleRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MeetingViewModel @Inject constructor(
-    private val meetingRepository: MeetingRepository
+    private val meetingRepository: MeetingRepository,
+    private val scheduleRepository: ScheduleRepository
 ) : ViewModel() {
 
     private val _meetingState = MutableStateFlow<MeetingState>(MeetingState.Initial)
@@ -35,6 +37,7 @@ class MeetingViewModel @Inject constructor(
                     _meetingState.value = MeetingState.Success
                     // Reload the meetings list
                     loadMeetings()
+                    scheduleRepository.refreshFromNetwork()
                 }
                 .onFailure { e ->
                     _meetingState.value = MeetingState.Error(e.message ?: "Unknown error")

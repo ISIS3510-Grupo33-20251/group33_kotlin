@@ -71,7 +71,6 @@ class ScheduleRepositoryImpl @Inject constructor(
                 val daySchedule = DaySchedule(date, meetings)
                 cachedSchedules.value = cachedSchedules.value + (date to daySchedule)
 
-                // Return immediately with local data
                 if (forceNetworkRefresh && !localOnly) {
                     coroutineScope.launch {
                         try { refreshFromNetwork() }
@@ -160,7 +159,7 @@ class ScheduleRepositoryImpl @Inject constructor(
 
     private suspend fun processMeetingsAndUpdateCache(meetings: List<MeetingResponse>) {
         try {
-            val updatedCache = mutableMapOf<LocalDate, MutableList<Meeting>>()
+            val updatedCache = cachedSchedules.value.toMutableMap()
             val meetingEntities = mutableListOf<MeetingEntity>()
 
             for (meeting in meetings) {
@@ -204,11 +203,7 @@ class ScheduleRepositoryImpl @Inject constructor(
                 Log.d(TAG, "Stored ${meetingEntities.size} meetings in database")
             }
 
-            val newCache = updatedCache.mapValues { (date, meetingList) ->
-                DaySchedule(date, meetingList)
-            }
-
-            cachedSchedules.value = newCache
+            cachedSchedules.value = updatedCache
         } catch (e: Exception) {
             Log.e(TAG, "Error in processMeetingsAndUpdateCache: ${e.message}", e)
         }
@@ -228,10 +223,21 @@ class ScheduleRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun refreshFromNetwork() {
-        val token = authRepository.getAuthToken() ?: return
-        val allMeetings = meetingApiService.getMeetings("Bearer $token")
-        processMeetingsAndUpdateCache(allMeetings)
+    override suspend fun refreshFromNetwork() {
+        try {
+            val token = authRepository.getAuthToken() ?: return
+            val allMeetings = meetingApiService.getMeetings("Bearer $token")
+
+            // Only process if we got data
+            if (allMeetings.isNotEmpty()) {
+                processMeetingsAndUpdateCache(allMeetings)
+            } else {
+                Log.d(TAG, "Received empty meetings list from network, preserving current data")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error refreshing cache", e)
+            // Don't clear existing data on error
+        }
     }
 
     suspend fun debugCheckLocalDatabase(): Int {

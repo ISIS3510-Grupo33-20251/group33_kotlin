@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.universe.domain.models.User
+import com.example.universe.domain.repositories.NetworkConnectivityObserver
+import com.example.universe.domain.repositories.NetworkStatus
 import com.example.universe.domain.usecases.GetCurrentUserUseCase
 import com.example.universe.domain.usecases.IsUserLoggedInUseCase
 import com.example.universe.domain.usecases.LoginUseCase
@@ -24,7 +26,8 @@ class AuthViewModel @Inject constructor(
     private val registerUseCase: RegisterUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val isUserLoggedInUseCase: IsUserLoggedInUseCase,
-    private val getCurrentUserUseCase: GetCurrentUserUseCase
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val newtworkConnectivityObserver: NetworkConnectivityObserver
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Initial)
@@ -36,8 +39,32 @@ class AuthViewModel @Inject constructor(
     private val _registerState = MutableStateFlow<RegisterState>(RegisterState.Initial)
     val registerState: StateFlow<RegisterState> = _registerState.asStateFlow()
 
+    private val _networkState = MutableStateFlow<NetworkStatus>(NetworkStatus.Available)
+    val networkState: StateFlow<NetworkStatus> = _networkState.asStateFlow()
+
+    private val _offlineMode = MutableStateFlow(false)
+    val offlineMode: StateFlow<Boolean> = _offlineMode.asStateFlow()
+
     init {
         checkAuthStatus()
+
+        viewModelScope.launch {
+            newtworkConnectivityObserver.observe().collect { status ->
+                _networkState.value = status
+                _offlineMode.value = (status == NetworkStatus.Lost || status == NetworkStatus.Unavailable)
+
+                if (_offlineMode.value) {
+                    // Reset login/register states if offline
+                    if (_loginState.value is LoginState.Loading) {
+                        _loginState.value = LoginState.Error("Cannot log in while offline")
+                    }
+
+                    if (_registerState.value is RegisterState.Loading) {
+                        _registerState.value = RegisterState.Error("Cannot register while offline")
+                    }
+                }
+            }
+        }
     }
 
     private fun checkAuthStatus() {
@@ -55,6 +82,11 @@ class AuthViewModel @Inject constructor(
     }
 
     fun login(email: String, password: String) {
+        if (_offlineMode.value) {
+            _loginState.value = LoginState.Error("Cannot log in while offline. Please check your internet connection and restart the app.")
+            return
+        }
+
         _loginState.value = LoginState.Loading
         viewModelScope.launch {
             loginUseCase(email, password)
@@ -69,6 +101,11 @@ class AuthViewModel @Inject constructor(
     }
 
     fun register(name: String, email: String, password: String) {
+        if (_offlineMode.value) {
+            _registerState.value = RegisterState.Error("Cannot register while offline")
+            return
+        }
+
         _registerState.value = RegisterState.Loading
         Log.d("AuthViewModel", "Attempting to register with email: $email, name: $name")
 

@@ -17,4 +17,6 @@ interface ScheduleRepository {
     fun getScheduleStream(date: LocalDate): Flow<DaySchedule>
 
     suspend fun removeMeeting(meetingId: String): Result<Unit>
+
+    suspend fun refreshFromNetwork()
 }
