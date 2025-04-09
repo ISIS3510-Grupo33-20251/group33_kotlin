@@ -72,6 +72,8 @@ class ScheduleViewModel @Inject constructor(
     private val _initialLoadComplete = MutableStateFlow(false)
     val initialLoadComplete: StateFlow<Boolean> = _initialLoadComplete.asStateFlow()
 
+    private var isRefreshing = false
+
     init {
 
         viewModelScope.launch {
@@ -156,6 +158,9 @@ class ScheduleViewModel @Inject constructor(
 
     fun loadScheduleForSelectedDate(forceNetworkRefresh: Boolean = false, localOnly: Boolean = false, showOfflineMessage: Boolean = false): Job {
         return viewModelScope.launch {
+            if (isRefreshing) return@launch
+
+            isRefreshing = true
             _isLoading.value = true
             _error.value = null
 
@@ -182,6 +187,7 @@ class ScheduleViewModel @Inject constructor(
                 }
 
             _isLoading.value = false
+            isRefreshing = false
         }
     }
 

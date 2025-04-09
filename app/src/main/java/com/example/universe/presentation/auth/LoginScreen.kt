@@ -31,10 +31,20 @@ fun LoginScreen(
 ) {
     val loginState by viewModel.loginState.collectAsState()
     val authState by viewModel.authState.collectAsState()
+    val offlineMode by viewModel.offlineMode.collectAsState()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(offlineMode) {
+        if (offlineMode) {
+            errorMessage = "You are offline. Login requires an internet connection. Please check your internet connection and restart the app."
+        } else if (errorMessage == "You are offline. Login requires an internet connection.") {
+            // Clear the offline error message when back online
+            errorMessage = ""
+        }
+    }
 
     LaunchedEffect(authState) {
         if (authState is AuthState.Authenticated) {
@@ -171,7 +181,9 @@ fun LoginScreen(
             // Login button
             Button(
                 onClick = {
-                    if (email.isNotEmpty() && password.isNotEmpty()) {
+                    if (offlineMode) {
+                        errorMessage = "You are offline. Login requires an internet connection. Please check your internet connection and restart the app."
+                    } else if (email.isNotEmpty() && password.isNotEmpty()) {
                         viewModel.login(email, password)
                     } else {
                         errorMessage = "Please fill in all fields"
@@ -184,7 +196,7 @@ fun LoginScreen(
                     backgroundColor = Color(0xFF667EFF)
                 ),
                 shape = RoundedCornerShape(8.dp),
-                enabled = loginState !is LoginState.Loading
+                enabled = !offlineMode && loginState !is LoginState.Loading
             ) {
                 if (loginState is LoginState.Loading) {
                     CircularProgressIndicator(

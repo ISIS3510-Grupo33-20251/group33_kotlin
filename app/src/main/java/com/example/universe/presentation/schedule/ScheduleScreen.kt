@@ -73,7 +73,8 @@ fun ScheduleScreen(
         // Load data whenever the selected date changes or network status changes
         scheduleViewModel.loadScheduleForSelectedDate(
             localOnly = offlineMode,
-            showOfflineMessage = offlineMode
+            showOfflineMessage = offlineMode,
+            forceNetworkRefresh = true
         )
     }
 
