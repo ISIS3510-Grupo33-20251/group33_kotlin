@@ -66,6 +66,23 @@ class NoteViewModel @Inject constructor(
         }
     }
 
+    fun deleteNote(id: String) {
+        _noteState.value = NoteState.Loading
+        viewModelScope.launch {
+            try {
+                val response = noteRepository.deleteNote(id)
+                if (response.isSuccessful) {
+                    getNotes() // Refrescar lista tras eliminar
+                } else {
+                    _noteState.value = NoteState.Error("Failed to delete note")
+                }
+            } catch (error: Exception) {
+                _noteState.value = NoteState.Error(error.message ?: "Unknown error")
+            }
+        }
+    }
+
+
 }
 
 
