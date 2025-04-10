@@ -47,6 +47,7 @@ fun AssignmentsScreen(
     var content by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var isEditing by remember { mutableStateOf(false) }
+    var noteId by remember { mutableStateOf<String?>(null) }
 
     val noteState by noteViewModel.noteState.collectAsState()
 
@@ -98,6 +99,7 @@ fun AssignmentsScreen(
                                         title = note.title
                                         subject = note.subject
                                         content = note.content
+                                        noteId = note.id
                                         isEditing = true
                                         showDialog = true
                                     },
@@ -135,17 +137,15 @@ fun AssignmentsScreen(
             }
         }
 
-        // Botones flotantes en la pantalla
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Botón "Add Note"
+        // Botones flotantes
+        Box(modifier = Modifier.fillMaxSize()) {
             FloatingActionButton(
                 onClick = {
                     title = ""
                     subject = ""
                     content = ""
                     isEditing = false
+                    noteId = null
                     showDialog = true
                 },
                 backgroundColor = Color(0xFF1A2340),
@@ -159,11 +159,8 @@ fun AssignmentsScreen(
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Note")
             }
 
-            // Nuevo botón con estrella
             FloatingActionButton(
-                onClick = { onFlashcardsClick()
-                    // Acción del botón estrella
-                },
+                onClick = { onFlashcardsClick() },
                 backgroundColor = Color.Black,
                 contentColor = Color.White,
                 shape = CircleShape,
@@ -176,10 +173,13 @@ fun AssignmentsScreen(
             }
         }
 
-        // Diálogo de creación/edición de notas
+        // Diálogo para crear/editar/eliminar nota
         if (showDialog) {
             AlertDialog(
-                onDismissRequest = { showDialog = false },
+                onDismissRequest = {
+                    showDialog = false
+                    noteId = null
+                },
                 title = {
                     Text(
                         text = if (isEditing) "Edit Note" else "New Note",
@@ -240,8 +240,14 @@ fun AssignmentsScreen(
                                 last_modified = currentDate
                             )
 
-                            noteViewModel.createNote(note)
+                            if (isEditing && noteId != null) {
+                                noteViewModel.updateNote(noteId!!, note)
+                            } else {
+                                noteViewModel.createNote(note)
+                            }
+
                             showDialog = false
+                            noteId = null
                         },
                         colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1A2340))
                     ) {
@@ -249,20 +255,38 @@ fun AssignmentsScreen(
                     }
                 },
                 dismissButton = {
-                    OutlinedButton(
-                        onClick = { showDialog = false },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
-                    ) {
-                        Text("Cancel")
+                    Row {
+                        if (isEditing && noteId != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    noteViewModel.deleteNote(noteId!!)
+                                    showDialog = false
+                                    noteId = null
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
+                            ) {
+                                Text("Delete")
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                showDialog = false
+                                noteId = null
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors()
+                        ) {
+                            Text("Cancel")
+                        }
                     }
                 }
             )
         }
 
-        // Footer con navegación
-        Column(
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
+        // Footer
+        Column(modifier = Modifier.align(Alignment.BottomCenter)) {
             Footer(
                 selectedScreen = "assignments",
                 onRemindersClick = onRemindersClick,
