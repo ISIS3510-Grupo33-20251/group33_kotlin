@@ -20,4 +20,5 @@ interface NoteApiService {
 
     @DELETE("notes/{id}")
     suspend fun deleteNote(@Path("id") id: String): Response<Unit>  // Eliminar nota
+
 }

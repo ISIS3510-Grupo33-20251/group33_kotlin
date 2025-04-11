@@ -2,6 +2,7 @@ package com.example.universe.presentation.assignments
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -20,14 +21,24 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import com.example.universe.data.models.Flashcard
+import com.example.universe.presentation.auth.AuthState
+import com.example.universe.presentation.auth.AuthViewModel
+import retrofit2.Response
 
 
 @Composable
 fun FlashcardsScreen(
     onBackClick: () -> Unit,
-    noteViewModel: NoteViewModel = hiltViewModel()
+    navController: NavHostController,
+    noteViewModel: NoteViewModel = hiltViewModel(),
 ) {
     val noteState by noteViewModel.noteState.collectAsState()
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val authState by authViewModel.authState.collectAsState()
+    val flashcardViewModel: FlashcardViewModel = hiltViewModel()
 
     LaunchedEffect(Unit) {
         noteViewModel.getNotes()
@@ -89,7 +100,16 @@ fun FlashcardsScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(8.dp),
+                                    .padding(8.dp)
+                                    .clickable {
+                                        val currentUser = (authState as? AuthState.Authenticated)?.user
+                                        val userId = currentUser?.id ?: return@clickable
+
+                                        navController.currentBackStackEntry?.savedStateHandle?.set("userId", userId)
+                                        navController.currentBackStackEntry?.savedStateHandle?.set("subject", note.subject)
+                                        // navegar
+                                        navController.navigate("flashcard_detail")
+                                    },
                                 elevation = 4.dp,
                                 shape = RoundedCornerShape(8.dp)
                             ) {

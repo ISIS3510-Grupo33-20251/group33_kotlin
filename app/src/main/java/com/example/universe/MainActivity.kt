@@ -29,6 +29,7 @@ import com.example.universe.presentation.home.HomeScreen
 import com.example.universe.presentation.location.LocationViewModel
 import com.example.universe.ui.theme.UniverseTheme
 import com.example.universe.presentation.assignments.AssignmentsScreen
+import com.example.universe.presentation.assignments.FlashcardDetailScreen
 import com.example.universe.presentation.assignments.FlashcardsScreen
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -141,7 +142,20 @@ fun AppNavHost(
         }
 
         composable("flashcards") {
-            FlashcardsScreen(onBackClick = { navController.popBackStack() })
+            FlashcardsScreen(
+                onBackClick = { navController.popBackStack() },
+                navController = navController
+            )
         }
+
+        composable("flashcard_detail") {
+            FlashcardDetailScreen(
+                navController = navController,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+
+
     }
 }
