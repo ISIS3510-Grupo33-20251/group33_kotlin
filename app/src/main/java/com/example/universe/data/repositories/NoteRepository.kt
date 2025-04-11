@@ -1,13 +1,15 @@
 package com.example.universe.data.repositories
 
 import com.example.universe.data.api.NoteApiService
+import com.example.universe.data.api.UserApiService
 import com.example.universe.data.models.NoteDto
 import retrofit2.Response
 import javax.inject.Inject
 
 
 class NoteRepository @Inject constructor(
-    private val api: NoteApiService) {
+    private val api: NoteApiService,
+    private val apiUser: UserApiService) {
 
     suspend fun getNotes(): Response<List<NoteDto>> {
         return api.getNotes()
@@ -28,4 +30,9 @@ class NoteRepository @Inject constructor(
     suspend fun deleteNote(id: String): Response<Unit> {
         return api.deleteNote(id)
     }
+
+    suspend fun addNoteToUser(userId: String, noteId: String): Response<Unit> {
+        return apiUser.addNoteToUser(userId, noteId)
+    }
+
 }

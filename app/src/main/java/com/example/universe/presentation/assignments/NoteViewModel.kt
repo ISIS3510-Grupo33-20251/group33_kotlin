@@ -24,13 +24,24 @@ class NoteViewModel @Inject constructor(
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
-                val createdNote = noteRepository.createNote(note)
+                val createdNote: Response<NoteDto> = noteRepository.createNote(note)
                 getNotes()
+
+                if(createdNote.code() == 200){
+
+                    val userId = createdNote.body()?.owner_id
+                    val noteId = createdNote.body()?.id
+                    if (userId != null && noteId != null) {
+                        noteRepository.addNoteToUser(userId, noteId )
+                    }
+
+                }
             } catch (error: Exception) {
                 _noteState.value = NoteState.Error(error.message ?: "Unknown error")
             }
         }
     }
+
 
     fun getNotes() {
         _noteState.value = NoteState.Loading

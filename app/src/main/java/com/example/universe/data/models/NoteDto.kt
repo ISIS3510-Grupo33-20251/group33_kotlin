@@ -11,5 +11,6 @@ data class NoteDto(
     @SerializedName("created_date") val created_date: String? = null,
     @SerializedName("last_modified") val last_modified: String? = null,
     @SerializedName("owner_id") val owner_id: String? = null
-    )
+    ) {
+}
 

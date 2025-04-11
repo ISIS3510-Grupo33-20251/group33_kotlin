@@ -31,7 +31,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Star
-
+import com.example.universe.presentation.auth.AuthState
+import com.example.universe.presentation.auth.AuthViewModel
 
 
 @Composable
@@ -50,6 +51,10 @@ fun AssignmentsScreen(
     var noteId by remember { mutableStateOf<String?>(null) }
 
     val noteState by noteViewModel.noteState.collectAsState()
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val currentUser = (authViewModel.authState.collectAsState().value as? AuthState.Authenticated)?.user
+    val userId = currentUser?.id
+
 
     LaunchedEffect(Unit) {
         noteViewModel.getNotes()
@@ -235,7 +240,7 @@ fun AssignmentsScreen(
                                 title = title,
                                 content = content,
                                 subject = subject,
-                                owner_id = "",
+                                owner_id = userId ?: "",
                                 created_date = currentDate,
                                 last_modified = currentDate
                             )

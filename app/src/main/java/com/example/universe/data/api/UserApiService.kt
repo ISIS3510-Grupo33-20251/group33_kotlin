@@ -4,6 +4,7 @@ import com.example.universe.data.models.FriendRequestDto
 import com.example.universe.data.models.UserDto
 import com.example.universe.data.models.SendFriendRequestDto
 import com.example.universe.domain.models.Location
+import retrofit2.Response
 import retrofit2.http.*
 
 interface UserApiService {
@@ -61,4 +62,10 @@ interface UserApiService {
         @Header("Authorization") token: String,
         @Path("userId") userId: String
     ): UserDto
+
+    @POST("users/{user_id}/notes/{note_id}")
+    suspend fun addNoteToUser(
+        @Path("user_id") userId: String,
+        @Path("note_id") noteId: String
+    ): Response<Unit>
 }
