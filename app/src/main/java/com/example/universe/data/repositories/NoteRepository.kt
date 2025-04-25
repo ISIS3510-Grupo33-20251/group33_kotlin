@@ -87,6 +87,7 @@ class NoteRepository @Inject constructor(
     }
 
     // Método para sincronizar notas que necesitan ser sincronizadas
+    // En NoteRepository.kt
     suspend fun syncPendingNotes() {
         // Obtener todas las notas locales que necesitan sincronización
         val pendingNotes = noteDao.getAllNotes().filter { it.needsSync }
@@ -105,12 +106,22 @@ class NoteRepository @Inject constructor(
                 // La nota permanecerá marcada como needsSync = true
             }
         }
+
+        // Limpiar el caché después de la sincronización exitosa
+        clearCache()
     }
 
     // Método para sincronizar las notas pendientes si hay conexión
     suspend fun syncNotesIfNetworkAvailable(isNetworkAvailable: Boolean) {
         if (isNetworkAvailable) {
-            syncPendingNotes() // Ejecuta la sincronización si hay conexión
+            syncPendingNotes()
         }
     }
+
+    // En NoteRepository.kt
+    suspend fun clearCache() {
+        // Aquí eliminamos las notas locales que ya han sido sincronizadas
+        noteDao.deleteSyncedNotes() // Este método debería eliminar las notas con `needsSync = false`
+    }
+
 }

@@ -106,7 +106,10 @@ class NoteViewModel @Inject constructor(
 
     fun syncNotesIfConnected(isConnected: Boolean) {
         viewModelScope.launch {
-            noteRepository.syncNotesIfNetworkAvailable(isConnected)
+            if (isConnected) {
+                // Sincronizar las notas pendientes
+                noteRepository.syncPendingNotes()
+            }
         }
     }
 

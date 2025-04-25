@@ -28,4 +28,7 @@ interface NoteDao{
     @Query("DELETE FROM notes")
     suspend fun deleteAllNotes()
 
+    @Query("DELETE FROM notes WHERE needsSync = 0") // Borrar notas ya sincronizadas
+    suspend fun deleteSyncedNotes()
+
 }
