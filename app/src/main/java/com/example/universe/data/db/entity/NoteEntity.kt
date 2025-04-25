@@ -12,5 +12,6 @@ data class NoteEntity(
     val tags: String, // Guardamos como JSON o separados por comas
     val created_date: String?,  // Usar snake_case
     val last_modified: String?, // Usar snake_case
-    val owner_id: String?
+    val owner_id: String?,
+    val needsSync: Boolean = false
 )

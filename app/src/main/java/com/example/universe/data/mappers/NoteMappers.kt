@@ -13,11 +13,11 @@ fun NoteEntity.toDto(): NoteDto {
         tags = this.tags.split(","),
         created_date = this.created_date,
         last_modified = this.last_modified,
-        owner_id = this.owner_id
+        owner_id = this.owner_id,
     )
 }
 
-fun NoteDto.toEntity(): NoteEntity {
+fun NoteDto.toEntity(needsSync: Boolean = false): NoteEntity {
     return NoteEntity(
         id = this.id ?: UUID.randomUUID().toString(), // importa java.util.UUID
         title = this.title,
@@ -26,6 +26,7 @@ fun NoteDto.toEntity(): NoteEntity {
         tags = this.tags.joinToString(","),
         created_date = this.created_date,
         last_modified = this.last_modified,
-        owner_id = this.owner_id
+        owner_id = this.owner_id,
+        needsSync = needsSync
     )
 }

@@ -1,5 +1,6 @@
 package com.example.universe.presentation.assignments
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.universe.data.models.NoteDto
@@ -12,10 +13,6 @@ import kotlinx.coroutines.launch
 import retrofit2.Response
 import javax.inject.Inject
 
-data class NoteValidationError(
-    val titleError: String? = null,
-    val contentError: String? = null
-)
 
 @HiltViewModel
 class NoteViewModel @Inject constructor(
@@ -107,6 +104,11 @@ class NoteViewModel @Inject constructor(
         }
     }
 
+    fun syncNotesIfConnected(isConnected: Boolean) {
+        viewModelScope.launch {
+            noteRepository.syncNotesIfNetworkAvailable(isConnected)
+        }
+    }
 
 }
 
