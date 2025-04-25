@@ -31,6 +31,8 @@ import com.example.universe.ui.theme.UniverseTheme
 import com.example.universe.presentation.assignments.AssignmentsScreen
 import com.example.universe.presentation.assignments.FlashcardDetailScreen
 import com.example.universe.presentation.assignments.FlashcardsScreen
+import com.example.universe.presentation.assignments.NoteViewModel
+import com.example.universe.utils.NetworkUtils
 import dagger.hilt.android.AndroidEntryPoint
 
 
@@ -48,11 +50,18 @@ class MainActivity : ComponentActivity() {
                     val authViewModel: AuthViewModel = hiltViewModel()
                     val locationViewModel: LocationViewModel = hiltViewModel()
                     val authState by authViewModel.authState.collectAsState()
+                    val noteViewModel: NoteViewModel = hiltViewModel()
 
+                    LaunchedEffect(Unit) {
+                        NetworkUtils.observeNetwork(applicationContext).collect { isConnected ->
+                            noteViewModel.syncNotesIfConnected(isConnected)
+                        }
+                    }
                     // Start location updates if user is authenticated
                     LaunchedEffect(authState) {
                         if (authState is AuthState.Authenticated) {
                             locationViewModel.startLocationUpdates()
+
                         }
                     }
 
