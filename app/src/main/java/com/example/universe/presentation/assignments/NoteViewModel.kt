@@ -12,6 +12,11 @@ import kotlinx.coroutines.launch
 import retrofit2.Response
 import javax.inject.Inject
 
+data class NoteValidationError(
+    val titleError: String? = null,
+    val contentError: String? = null
+)
+
 @HiltViewModel
 class NoteViewModel @Inject constructor(
     private val noteRepository: NoteRepository
@@ -21,26 +26,31 @@ class NoteViewModel @Inject constructor(
     val noteState: StateFlow<NoteState> = _noteState.asStateFlow()
 
     fun createNote(note: NoteDto) {
+        // Validación simple para campos vacíos
+        if (note.title.isBlank() || note.content.isBlank() || note.subject.isBlank()) {
+            _noteState.value = NoteState.Error("Note fields cannot be empty.")
+            return
+        }
+
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
                 val createdNote: Response<NoteDto> = noteRepository.createNote(note)
                 getNotes()
 
-                if(createdNote.code() == 200){
-
+                if (createdNote.code() == 200) {
                     val userId = createdNote.body()?.owner_id
                     val noteId = createdNote.body()?.id
                     if (userId != null && noteId != null) {
-                        noteRepository.addNoteToUser(userId, noteId )
+                        noteRepository.addNoteToUser(userId, noteId)
                     }
-
                 }
             } catch (error: Exception) {
                 _noteState.value = NoteState.Error(error.message ?: "Unknown error")
             }
         }
     }
+
 
 
     fun getNotes() {
@@ -62,6 +72,10 @@ class NoteViewModel @Inject constructor(
 
 
     fun updateNote(id: String, note: NoteDto) {
+        if (note.title.isBlank() || note.content.isBlank() || note.subject.isBlank()) {
+            _noteState.value = NoteState.Error("Note fields cannot be empty.")
+            return
+        }
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
