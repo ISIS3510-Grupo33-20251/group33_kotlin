@@ -16,4 +16,5 @@ interface FriendRepository {
     fun getFriendsStream(): Flow<List<User>>
     fun setOfflineMode(offline: Boolean)
     fun isOfflineMode(): Flow<Boolean>
+    suspend fun clearCache()
 }

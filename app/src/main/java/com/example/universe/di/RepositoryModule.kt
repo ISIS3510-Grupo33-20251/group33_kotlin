@@ -56,4 +56,5 @@ abstract class RepositoryModule {
     abstract fun bindFriendLocationRepository(
         friendLocationRepositoryImpl: FriendLocationRepositoryImpl
     ): FriendLocationRepository
+
 }

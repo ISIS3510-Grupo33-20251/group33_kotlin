@@ -19,4 +19,5 @@ interface ScheduleRepository {
     suspend fun removeMeeting(meetingId: String): Result<Unit>
 
     suspend fun refreshFromNetwork()
+    suspend fun clearCache()
 }

@@ -253,4 +253,9 @@ class ScheduleRepositoryImpl @Inject constructor(
             -1
         }
     }
+
+    override suspend fun clearCache() {
+        cachedSchedules.value = emptyMap()
+        meetingDao.clearMeetings()
+    }
 }

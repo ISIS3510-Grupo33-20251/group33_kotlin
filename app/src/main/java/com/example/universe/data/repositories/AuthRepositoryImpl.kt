@@ -3,6 +3,7 @@ package com.example.universe.data.repositories
 import android.content.SharedPreferences
 import android.util.Log
 import com.example.universe.data.api.AuthApiService
+import com.example.universe.data.db.AppDatabase
 import com.example.universe.data.models.ErrorResponse
 import com.example.universe.data.models.LoginRequestDto
 import com.example.universe.data.models.RegisterRequestDto
@@ -19,7 +20,8 @@ import javax.inject.Inject
 class AuthRepositoryImpl @Inject constructor(
     private val authApiService: AuthApiService,
     private val sharedPreferences: SharedPreferences,
-    private val gson: Gson
+    private val gson: Gson,
+    private val appDatabase: AppDatabase
 ) : AuthRepository {
 
     companion object {
@@ -93,6 +95,12 @@ class AuthRepositoryImpl @Inject constructor(
         sharedPreferences.edit()
             .remove(KEY_TOKEN)
             .remove(KEY_USER)
+            .apply()
+
+        appDatabase.clearAllTablesData()
+        // Clear any other caches if needed
+        sharedPreferences.edit()
+            .remove("friend_info_map")
             .apply()
     }
 

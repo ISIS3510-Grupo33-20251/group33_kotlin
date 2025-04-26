@@ -324,4 +324,9 @@ class FriendRepositoryImpl @Inject constructor(
             Result.failure(Exception("Failed to get user: ${e.message}"))
         }
     }
+
+    override suspend fun clearCache() {
+        _friendsCache.value = emptyList()
+        friendDao.deleteAll()
+    }
 }
