@@ -15,4 +15,9 @@ import com.example.universe.data.db.entity.MeetingEntity
 abstract class AppDatabase : RoomDatabase() {
     abstract fun meetingDao(): MeetingDao
     abstract fun friendDao(): FriendDao
+
+    suspend fun clearAllTablesData() {
+        meetingDao().clearMeetings()
+        friendDao().deleteAll()
+    }
 }
