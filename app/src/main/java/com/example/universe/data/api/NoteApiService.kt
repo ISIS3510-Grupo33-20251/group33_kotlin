@@ -6,8 +6,8 @@ import retrofit2.http.*
 
 interface NoteApiService {
 
-    @GET("notes")
-    suspend fun getNotes(): Response<List<NoteDto>>  // Obtener todas las notas
+    @GET("users/{user_id}/notes")
+    suspend fun getNotes(@Path("user_id")id: String): Response<List<NoteDto>>
 
     @GET("notes/{id}")
     suspend fun getNoteById(@Path("id") id: String): Response<NoteDto>  // Obtener una nota por ID
