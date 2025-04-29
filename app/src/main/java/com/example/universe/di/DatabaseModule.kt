@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.example.universe.data.db.AppDatabase
 import com.example.universe.data.db.dao.FriendDao
 import com.example.universe.data.db.dao.MeetingDao
+import com.example.universe.data.db.dao.NoteDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,4 +38,10 @@ object DatabaseModule {
     fun provideFriendDao(database: AppDatabase): FriendDao {
         return database.friendDao()
     }
+
+    @Provides
+    fun provideNoteDao(database: AppDatabase): NoteDao {
+        return database.noteDao()
+    }
+
 }

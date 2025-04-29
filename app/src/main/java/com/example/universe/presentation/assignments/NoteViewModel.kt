@@ -21,26 +21,31 @@ class NoteViewModel @Inject constructor(
     val noteState: StateFlow<NoteState> = _noteState.asStateFlow()
 
     fun createNote(note: NoteDto, userId: String) {
+        if (note.title.isNullOrBlank() || note.content.isNullOrBlank()) {
+            _noteState.value = NoteState.Error("Title, subject or content can't be empty")
+            return
+        }
+
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
                 val createdNote: Response<NoteDto> = noteRepository.createNote(note)
                 getNotes(userId)
 
-                if(createdNote.code() == 200){
-
+                if (createdNote.code() == 200) {
                     val userIdR = createdNote.body()?.owner_id
                     val noteId = createdNote.body()?.id
                     if (userIdR != null && noteId != null) {
-                        noteRepository.addNoteToUser(userId, noteId )
+                        noteRepository.addNoteToUser(userId, noteId)
                     }
-
                 }
             } catch (error: Exception) {
                 _noteState.value = NoteState.Error(error.message ?: "Unknown error")
             }
+            getNotes(userId)
         }
     }
+
 
 
     fun getNotes(userId: String) {
@@ -62,6 +67,11 @@ class NoteViewModel @Inject constructor(
 
 
     fun updateNote(id: String, note: NoteDto, userId: String) {
+        if (note.title.isNullOrBlank() || note.content.isNullOrBlank()) {
+            _noteState.value = NoteState.Error("Title, subject or content can't be empty")
+            return
+        }
+
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
