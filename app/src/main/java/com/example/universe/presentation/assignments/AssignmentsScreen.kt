@@ -57,7 +57,10 @@ fun AssignmentsScreen(
 
 
     LaunchedEffect(Unit) {
-        noteViewModel.getNotes()
+        if(userId != null){
+            noteViewModel.getNotes(userId)
+        }
+
     }
 
     Box(
@@ -246,9 +249,9 @@ fun AssignmentsScreen(
                             )
 
                             if (isEditing && noteId != null) {
-                                noteViewModel.updateNote(noteId!!, note)
+                                noteViewModel.updateNote(noteId!!, note, userId!!)
                             } else {
-                                noteViewModel.createNote(note)
+                                noteViewModel.createNote(note, userId!!)
                             }
 
                             showDialog = false
@@ -264,7 +267,7 @@ fun AssignmentsScreen(
                         if (isEditing && noteId != null) {
                             OutlinedButton(
                                 onClick = {
-                                    noteViewModel.deleteNote(noteId!!)
+                                    noteViewModel.deleteNote(noteId!!, userId!!)
                                     showDialog = false
                                     noteId = null
                                 },

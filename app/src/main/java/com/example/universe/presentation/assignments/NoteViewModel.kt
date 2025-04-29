@@ -20,18 +20,18 @@ class NoteViewModel @Inject constructor(
     private val _noteState = MutableStateFlow<NoteState>(NoteState.Initial)
     val noteState: StateFlow<NoteState> = _noteState.asStateFlow()
 
-    fun createNote(note: NoteDto) {
+    fun createNote(note: NoteDto, userId: String) {
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
                 val createdNote: Response<NoteDto> = noteRepository.createNote(note)
-                getNotes()
+                getNotes(userId)
 
                 if(createdNote.code() == 200){
 
-                    val userId = createdNote.body()?.owner_id
+                    val userIdR = createdNote.body()?.owner_id
                     val noteId = createdNote.body()?.id
-                    if (userId != null && noteId != null) {
+                    if (userIdR != null && noteId != null) {
                         noteRepository.addNoteToUser(userId, noteId )
                     }
 
@@ -43,11 +43,11 @@ class NoteViewModel @Inject constructor(
     }
 
 
-    fun getNotes() {
+    fun getNotes(userId: String) {
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
-                val response = noteRepository.getNotes()
+                val response = noteRepository.getNotes(userId)
                 if (response.isSuccessful) {
                     val allNotes = response.body() ?: emptyList()
                     _noteState.value = NoteState.Success(allNotes)
@@ -61,13 +61,13 @@ class NoteViewModel @Inject constructor(
     }
 
 
-    fun updateNote(id: String, note: NoteDto) {
+    fun updateNote(id: String, note: NoteDto, userId: String) {
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
                 val updatedNote = noteRepository.updateNote(id, note)
                 if (updatedNote.isSuccessful) {
-                    getNotes() // Recargar la lista de notas después de actualizar
+                    getNotes(userId) // Recargar la lista de notas después de actualizar
                 } else {
                     _noteState.value = NoteState.Error("Failed to update note")
                 }
@@ -77,13 +77,13 @@ class NoteViewModel @Inject constructor(
         }
     }
 
-    fun deleteNote(id: String) {
+    fun deleteNote(id: String, userId: String) {
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
                 val response = noteRepository.deleteNote(id)
                 if (response.isSuccessful) {
-                    getNotes() // Refrescar lista tras eliminar
+                    getNotes(userId)
                 } else {
                     _noteState.value = NoteState.Error("Failed to delete note")
                 }

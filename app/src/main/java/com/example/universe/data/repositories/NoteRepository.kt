@@ -11,8 +11,8 @@ class NoteRepository @Inject constructor(
     private val api: NoteApiService,
     private val apiUser: UserApiService) {
 
-    suspend fun getNotes(): Response<List<NoteDto>> {
-        return api.getNotes()
+    suspend fun getNotes(userId: String): Response<List<NoteDto>> {
+        return api.getNotes(userId)
     }
 
     suspend fun getNoteById(id: String): Response<NoteDto> {

@@ -39,9 +39,11 @@ fun FlashcardsScreen(
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
     val flashcardViewModel: FlashcardViewModel = hiltViewModel()
+    val currentUser = (authViewModel.authState.collectAsState().value as? AuthState.Authenticated)?.user
+    val userId = currentUser?.id
 
     LaunchedEffect(Unit) {
-        noteViewModel.getNotes()
+        noteViewModel.getNotes(userId!!)
     }
 
     Box(
