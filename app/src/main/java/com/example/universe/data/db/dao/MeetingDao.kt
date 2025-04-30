@@ -9,8 +9,8 @@ import com.example.universe.data.db.entity.MeetingEntity
 
 @Dao
 interface MeetingDao {
-    @Query("SELECT * FROM meeting WHERE dateKey = :dateKey")
-    suspend fun getMeetingsForDate(dateKey: String): List<MeetingEntity>
+    @Query("SELECT * FROM meeting WHERE dateKey = :dateKey AND participants LIKE '%' || :userId || '%'")
+    suspend fun getMeetingsForDate(dateKey: String, userId: String): List<MeetingEntity>
 
     @Query("SELECT * FROM meeting")
     suspend fun getAllMeetings(): List<MeetingEntity>

@@ -106,4 +106,15 @@ class FriendLocationRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun clearCache() {
+        _friendInfoMap.value = emptyMap()
+        _friendsWithLocationAndInfo.value = emptyList()
+
+        sharedPreferences.edit()
+            .remove("friend_info_map")
+            .apply()
+
+        Log.d("FriendLocationRepo", "Friend location cache cleared")
+    }
 }

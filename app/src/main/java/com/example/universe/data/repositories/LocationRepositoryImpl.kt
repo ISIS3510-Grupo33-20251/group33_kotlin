@@ -146,6 +146,12 @@ class LocationRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun clearCache() {
+        _friendLocationsCache.value = emptyMap()
+        // Stop any ongoing location updates
+        stopLocationUpdates()
+    }
+
     fun getFriendLocationsStream(): Flow<Map<String, AppLocation>> = _friendLocationsCache.asStateFlow()
 
 }

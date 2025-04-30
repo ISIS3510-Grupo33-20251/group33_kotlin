@@ -9,4 +9,5 @@ interface LocationRepository {
     suspend fun getFriendLocations(): Result<Map<String, Location>>
     fun startLocationUpdates()
     fun stopLocationUpdates()
+    suspend fun clearCache()
 }

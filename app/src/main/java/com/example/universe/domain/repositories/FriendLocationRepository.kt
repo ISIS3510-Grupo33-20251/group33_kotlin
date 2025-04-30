@@ -6,4 +6,5 @@ import kotlinx.coroutines.flow.Flow
 interface FriendLocationRepository {
     fun getFriendsWithLocationAndInfo(): Flow<List<FriendWithDistanceAndInfo>>
     suspend fun loadFriendsWithLocation()
+    suspend fun clearCache()
 }

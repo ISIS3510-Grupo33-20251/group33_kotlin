@@ -43,10 +43,15 @@ class ScheduleRepositoryImpl @Inject constructor(
 
     override suspend fun getScheduleForDay(date: LocalDate, forceNetworkRefresh: Boolean, localOnly: Boolean): Result<DaySchedule> {
         // First check if we have this date in our cache
+        // user ID
+        val currentUser = authRepository.getCurrentUser().first()
+            ?: return Result.failure(Exception("User not found"))
+        val userId = currentUser.id
         try {
             val dateKey = date.toString()
             Log.d(TAG, "Fetching schedule for day $dateKey from local database")
-            val localMeetings = meetingDao.getMeetingsForDate(dateKey)
+
+            val localMeetings = meetingDao.getMeetingsForDate(dateKey, userId)
 
             if (localMeetings.isNotEmpty()) {
                 Log.d(TAG, "Found ${localMeetings.size} meetings in Room for date $dateKey")
@@ -98,8 +103,13 @@ class ScheduleRepositoryImpl @Inject constructor(
             val allMeetings = meetingApiService.getMeetings("Bearer $token")
             Log.d(TAG, "Fetched ${allMeetings.size} meetings from API")
 
+            // Filter meetings where the current user is a participant
+            val userMeetings = allMeetings.filter { meeting ->
+                meeting.participants.contains(userId) || meeting.hostId == userId
+            }
+
             // Process all meetings and update cache
-            processMeetingsAndUpdateCache(allMeetings)
+            processMeetingsAndUpdateCache(userMeetings)
 
             val daySchedule = cachedSchedules.value[date] ?: DaySchedule(date)
             Result.success(daySchedule)
