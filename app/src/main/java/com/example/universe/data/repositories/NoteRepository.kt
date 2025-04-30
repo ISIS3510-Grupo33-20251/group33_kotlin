@@ -2,14 +2,18 @@ package com.example.universe.data.repositories
 
 import com.example.universe.data.api.NoteApiService
 import com.example.universe.data.api.UserApiService
+import com.example.universe.data.db.dao.NoteDao
+import com.example.universe.data.mappers.NoteMapper.toDto
 import com.example.universe.data.models.NoteDto
+import com.example.universe.work.NetworkUtils
 import retrofit2.Response
 import javax.inject.Inject
 
 
 class NoteRepository @Inject constructor(
     private val api: NoteApiService,
-    private val apiUser: UserApiService) {
+    private val apiUser: UserApiService,
+    private val noteDao: NoteDao) {
 
     suspend fun getNotes(userId: String): Response<List<NoteDto>> {
         return api.getNotes(userId)

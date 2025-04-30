@@ -55,13 +55,13 @@ fun AssignmentsScreen(
     val currentUser = (authViewModel.authState.collectAsState().value as? AuthState.Authenticated)?.user
     val userId = currentUser?.id
 
-
     LaunchedEffect(Unit) {
         if(userId != null){
             noteViewModel.getNotes(userId)
         }
-
     }
+
+    val context = LocalContext.current // Context for Toast
 
     Box(
         modifier = Modifier
@@ -230,32 +230,38 @@ fun AssignmentsScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            val calendar = Calendar.getInstance()
-                            val day = calendar.get(Calendar.DAY_OF_MONTH)
-                            val month = calendar.get(Calendar.MONTH) + 1
-                            val year = calendar.get(Calendar.YEAR)
-
-                            val formattedDay = String.format("%02d", day)
-                            val formattedMonth = String.format("%02d", month)
-                            val currentDate = "$year-$formattedMonth-$formattedDay"
-
-                            val note = NoteDto(
-                                title = title,
-                                content = content,
-                                subject = subject,
-                                owner_id = userId ?: "",
-                                created_date = currentDate,
-                                last_modified = currentDate
-                            )
-
-                            if (isEditing && noteId != null) {
-                                noteViewModel.updateNote(noteId!!, note, userId!!)
+                            if (title.isBlank() || subject.isBlank() || content.isBlank()) {
+                                Toast.makeText(context, "All fields must be filled", Toast.LENGTH_SHORT).show()
                             } else {
-                                noteViewModel.createNote(note, userId!!)
-                            }
+                                val calendar = Calendar.getInstance()
+                                val day = calendar.get(Calendar.DAY_OF_MONTH)
+                                val month = calendar.get(Calendar.MONTH) + 1
+                                val year = calendar.get(Calendar.YEAR)
 
-                            showDialog = false
-                            noteId = null
+                                val formattedDay = String.format("%02d", day)
+                                val formattedMonth = String.format("%02d", month)
+                                val currentDate = "$year-$formattedMonth-$formattedDay"
+
+                                val note = NoteDto(
+                                    title = title,
+                                    content = content,
+                                    subject = subject,
+                                    owner_id = userId ?: "",
+                                    created_date = currentDate,
+                                    last_modified = currentDate
+                                )
+
+                                if (isEditing && noteId != null) {
+                                    noteViewModel.updateNote(noteId!!, note, userId!!)
+                                } else {
+                                    noteViewModel.createNote(note, userId!!)
+
+                                }
+
+
+                                showDialog = false
+                                noteId = null
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1A2340))
                     ) {

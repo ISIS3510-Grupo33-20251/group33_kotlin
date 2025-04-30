@@ -53,9 +53,11 @@ fun FlashcardDetailScreen(
                 Text("Error: $error", color = Color.Red)
             }
             flashcards.isEmpty() -> {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Loading... Please don't leave yet.", fontSize = 16.sp)
+                Text(
+                    text = "There is not enough information in the note to generate a flashcard",
+                    color = Color.Gray,
+                    fontSize = 16.sp
+                )
             }
             else -> {
                 LazyColumn {
