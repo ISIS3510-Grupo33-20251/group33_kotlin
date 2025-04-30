@@ -81,9 +81,47 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    private fun validateInput(email: String, password: String): Pair<Boolean, String?> {
+        if (email.contains(" ")) {
+            return Pair(false, "Email cannot contain spaces")
+        }
+
+        if (password.contains(" ")) {
+            return Pair(false, "Password cannot contain spaces")
+        }
+
+        if (containsEmoji(email)) {
+            return Pair(false, "Email cannot contain emojis")
+        }
+
+        if (containsEmoji(password)) {
+            return Pair(false, "Password cannot contain emojis")
+        }
+
+        return Pair(true, null)
+    }
+
+    private fun containsEmoji(text: String): Boolean {
+        // check if any character is outside standard ASCII and common Unicode scripts
+        for (char in text) {
+            val code = char.code
+            if (code > 0x1000 || (code in 0x80..0x9F)) {
+                // This is likely an emoji or other special character
+                return true
+            }
+        }
+        return false
+    }
+
     fun login(email: String, password: String) {
         if (_offlineMode.value) {
             _loginState.value = LoginState.Error("Cannot log in while offline. Please check your internet connection and restart the app.")
+            return
+        }
+
+        val (isValid, errorMessage) = validateInput(email, password)
+        if (!isValid) {
+            _loginState.value = LoginState.Error(errorMessage ?: "Invalid input")
             return
         }
 
@@ -103,6 +141,12 @@ class AuthViewModel @Inject constructor(
     fun register(name: String, email: String, password: String) {
         if (_offlineMode.value) {
             _registerState.value = RegisterState.Error("Cannot register while offline")
+            return
+        }
+
+        val (isValid, errorMessage) = validateInput(email, password)
+        if (!isValid) {
+            _registerState.value = RegisterState.Error(errorMessage ?: "Invalid input")
             return
         }
 
