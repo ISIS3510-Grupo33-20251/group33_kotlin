@@ -21,7 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.delay
 
 
 @Composable
@@ -37,9 +41,19 @@ fun FlashcardDetailScreen(
     val flashcards by flashcardViewModel.flashcards.collectAsState()
     val error by flashcardViewModel.error.collectAsState()
 
+    var loading by remember { mutableStateOf(true) }
+    var timeoutReached by remember { mutableStateOf(false) }
+
+    // Inicia fetch y temporizador de timeout
     LaunchedEffect(userId, subject) {
         if (!userId.isNullOrBlank() && !subject.isNullOrBlank()) {
             flashcardViewModel.fetchFlashcards(userId, subject)
+
+            delay(10000L)  // espera 15 segundos
+            if (flashcards.isEmpty()) {
+                timeoutReached = true
+            }
+            loading = false
         }
     }
 
@@ -52,9 +66,21 @@ fun FlashcardDetailScreen(
             error != null -> {
                 Text("Error: $error", color = Color.Red)
             }
+            loading && !timeoutReached -> {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Generating flashcards...", fontSize = 16.sp)
+            }
+            timeoutReached -> {
+                Text(
+                    text = "The AI could not find enough information in the note to generate a flashcard.",
+                    color = Color.Gray,
+                    fontSize = 16.sp
+                )
+            }
             flashcards.isEmpty() -> {
                 Text(
-                    text = "There is not enough information in the note to generate a flashcard",
+                    text = "No flashcards generated.",
                     color = Color.Gray,
                     fontSize = 16.sp
                 )
