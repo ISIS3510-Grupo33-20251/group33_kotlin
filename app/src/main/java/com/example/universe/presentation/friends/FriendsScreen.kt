@@ -64,6 +64,8 @@ fun FriendsScreen(
     val friendsWithLocationAndInfo by locationViewModel.friendsWithLocationAndInfo.collectAsState()
 
     LaunchedEffect(Unit) {
+        viewModel.loadFriends()
+        viewModel.refreshFriendLocations()
         locationViewModel.loadFriendLocations()
     }
 

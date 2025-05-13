@@ -177,13 +177,17 @@ class MeetingRepositoryImpl @Inject constructor(
         endDateTime: String,
         userId: String
     ): Meeting {
+        val dateTime = LocalDateTime.parse(startDateTime)
+        val dayOfWeek = dateTime.dayOfWeek.value
+
         val meeting = MeetingRequest(
             title = title,
             description = description,
             startTime = startDateTime,
             endTime = endDateTime,
             hostId = userId,
-            participants = listOf(userId)
+            participants = listOf(userId),
+            dayOfTheWeek = dayOfWeek
         )
 
         // Make API call
@@ -225,13 +229,16 @@ class MeetingRepositoryImpl @Inject constructor(
             val newStartDateStr = newStartDate.format(formatter)
             val newEndDateStr = newEndDate.format(formatter)
 
+            val dayOfWeek = newStartDate.dayOfWeek.value
+
             val meeting = MeetingRequest(
                 title = title,
                 description = description,
                 startTime = newStartDateStr,
                 endTime = newEndDateStr,
                 hostId = userId,
-                participants = listOf(userId)
+                participants = listOf(userId),
+                dayOfTheWeek = dayOfWeek
             )
 
             try {
