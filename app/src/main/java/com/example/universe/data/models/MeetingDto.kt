@@ -14,7 +14,9 @@ data class MeetingRequest(
     val meetingLink: String? = null,
     @SerializedName("host_id")
     val hostId: String,
-    val participants: List<String> = emptyList()
+    val participants: List<String> = emptyList(),
+    @SerializedName("day_of_week")
+    val dayOfTheWeek: Int
 )
 
 data class MeetingResponse(

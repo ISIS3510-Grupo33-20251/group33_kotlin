@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.universe.domain.models.FriendRequest
 import com.example.universe.domain.models.User
+import com.example.universe.domain.repositories.FriendLocationRepository
 import com.example.universe.domain.repositories.FriendRepository
 import com.example.universe.domain.repositories.NetworkConnectivityObserver
 import com.example.universe.domain.repositories.NetworkStatus
+import com.example.universe.presentation.location.LocationViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -23,7 +25,8 @@ import javax.inject.Inject
 @HiltViewModel
 class FriendsViewModel @Inject constructor(
     private val friendRepository: FriendRepository,
-    private val networkConnectivityObserver: NetworkConnectivityObserver
+    private val networkConnectivityObserver: NetworkConnectivityObserver,
+    private val friendLocationRepository: FriendLocationRepository
 ) : ViewModel() {
 
     private val _friendsState = friendRepository.getFriendsStream()
@@ -202,6 +205,12 @@ class FriendsViewModel @Inject constructor(
                 .onFailure { error ->
                     _error.value = "Failed to remove friend: ${error.message}"
                 }
+        }
+    }
+
+    fun refreshFriendLocations() {
+        viewModelScope.launch {
+            friendLocationRepository.loadFriendsWithLocation()
         }
     }
 }
