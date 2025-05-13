@@ -19,6 +19,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.universe.domain.repositories.NetworkConnectivityObserver
 import com.example.universe.presentation.auth.AuthState
 import com.example.universe.presentation.auth.AuthViewModel
 import com.example.universe.presentation.auth.LoginScreen
@@ -31,11 +32,17 @@ import com.example.universe.ui.theme.UniverseTheme
 import com.example.universe.presentation.assignments.AssignmentsScreen
 import com.example.universe.presentation.assignments.FlashcardDetailScreen
 import com.example.universe.presentation.assignments.FlashcardsScreen
+import com.example.universe.presentation.assignments.NoteViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var networkObserver: NetworkConnectivityObserver
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -47,8 +54,12 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val authViewModel: AuthViewModel = hiltViewModel()
                     val locationViewModel: LocationViewModel = hiltViewModel()
+                    val noteViewModel: NoteViewModel = hiltViewModel() // 👈 importante
                     val authState by authViewModel.authState.collectAsState()
 
+                    LaunchedEffect(Unit) {
+                        noteViewModel.observeNetworkAndSync(networkObserver)
+                    }
                     // Start location updates if user is authenticated
                     LaunchedEffect(authState) {
                         if (authState is AuthState.Authenticated) {

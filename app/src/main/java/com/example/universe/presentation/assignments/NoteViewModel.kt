@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.universe.data.models.NoteDto
 import com.example.universe.data.repositories.NoteRepository
+import com.example.universe.domain.repositories.NetworkConnectivityObserver
+import com.example.universe.domain.repositories.NetworkStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -119,6 +121,17 @@ class NoteViewModel @Inject constructor(
             getNotes(userId, isOffline)
         }
     }
+
+    fun observeNetworkAndSync(networkObserver: NetworkConnectivityObserver) {
+        viewModelScope.launch {
+            networkObserver.observe().collect { status ->
+                if (status == NetworkStatus.Available) {
+                    noteRepository.syncPendingNotes()
+                }
+            }
+        }
+    }
+
 
 }
 

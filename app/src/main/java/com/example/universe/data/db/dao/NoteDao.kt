@@ -33,5 +33,6 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE owner_id = :userId AND deleted = 0")
     suspend fun getNotesByUser(userId: String): List<NoteEntity>
 
-
+    @Query("DELETE FROM notes WHERE id = :id")
+    suspend fun deleteNote(id: String)
 }

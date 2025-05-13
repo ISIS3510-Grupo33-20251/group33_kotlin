@@ -62,17 +62,38 @@ class NoteRepository @Inject constructor(
         }
     }
 
-
     suspend fun syncPendingNotes() {
         val pendingNotes = noteDao.getPendingNotes()
-        for (note in pendingNotes) {
+
+        for (noteEntity in pendingNotes) {
             try {
-                val response = api.createNote(NoteMapper.toDto(note))
-                if (response.isSuccessful) {
-                    noteDao.markAsSynced(note.id)
+                val noteDto = NoteMapper.toDto(noteEntity)
+
+                if (noteEntity.deleted) {
+                    // Eliminar en el servidor
+                    val response = api.deleteNote(noteEntity.id)
+                    if (response.isSuccessful) {
+                        noteDao.deleteNoteById(noteEntity.id) // Borra localmente si se eliminó bien
+                    }
+                } else {
+                    val response = api.createNote(noteDto)
+                    if (response.isSuccessful) {
+                        val syncedNote = response.body()
+                        if (syncedNote != null) {
+                            // Insertar la nota sincronizada y marcarla como sincronizada
+                            noteDao.insertNote(NoteMapper.fromDto(syncedNote).copy(isSynced = true))
+
+                            // Agregar la nota al usuario en el servidor
+                            apiUser.addNoteToUser(syncedNote.owner_id!!, syncedNote.id!!)
+
+                            // ✅ Eliminar la nota local después de sincronizarla
+                            noteDao.deleteNoteById(noteEntity.id)
+                        }
+                    }
                 }
+
             } catch (e: Exception) {
-                // log error, no hay conexión o hubo fallo
+                // Si hay error, no pasa nada, volverá a intentar en el próximo ciclo
             }
         }
     }
