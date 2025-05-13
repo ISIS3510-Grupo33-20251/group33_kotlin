@@ -20,7 +20,7 @@ class NoteViewModel @Inject constructor(
     private val _noteState = MutableStateFlow<NoteState>(NoteState.Initial)
     val noteState: StateFlow<NoteState> = _noteState.asStateFlow()
 
-    fun createNote(note: NoteDto, userId: String) {
+    fun createNote(note: NoteDto, userId: String, isOffline: Boolean = false) {
         if (note.title.isNullOrBlank() || note.content.isNullOrBlank()) {
             _noteState.value = NoteState.Error("Title, subject or content can't be empty")
             return
@@ -29,44 +29,54 @@ class NoteViewModel @Inject constructor(
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
-                val createdNote: Response<NoteDto> = noteRepository.createNote(note)
-                getNotes(userId)
+                if (isOffline) {
+                    noteRepository.createNoteOffline(note)
+                } else {
+                    val createdNote: Response<NoteDto> = noteRepository.createNote(note)
+                    if (createdNote.code() == 200) {
+                        val userIdR = createdNote.body()?.owner_id
+                        val noteId = createdNote.body()?.id
+                        if (userIdR != null && noteId != null) {
+                            noteRepository.addNoteToUser(userId, noteId)
+                        }
+                    }
+                }
+                getNotes(userId, isOffline)
+            } catch (error: Exception) {
+                // fallback a local si ocurre error
+                noteRepository.createNoteOffline(note)
+                getNotes(userId, isOffline = true)
+                _noteState.value = NoteState.Error("Error online: guardado offline")
+            }
+        }
+    }
 
-                if (createdNote.code() == 200) {
-                    val userIdR = createdNote.body()?.owner_id
-                    val noteId = createdNote.body()?.id
-                    if (userIdR != null && noteId != null) {
-                        noteRepository.addNoteToUser(userId, noteId)
+    fun getNotes(userId: String, isOffline: Boolean = false) {
+        _noteState.value = NoteState.Loading
+        viewModelScope.launch {
+            try {
+                if (isOffline) {
+                    val localNotes = noteRepository.getNotesOffline(userId)
+                    _noteState.value = NoteState.Success(localNotes)
+                } else {
+                    val response = noteRepository.getNotes(userId)
+                    if (response.isSuccessful) {
+                        val allNotes = response.body() ?: emptyList()
+                        _noteState.value = NoteState.Success(allNotes)
+                    } else {
+                        // fallback a local
+                        val localNotes = noteRepository.getNotesOffline(userId)
+                        _noteState.value = NoteState.Success(localNotes)
                     }
                 }
             } catch (error: Exception) {
-                _noteState.value = NoteState.Error(error.message ?: "Unknown error")
-            }
-            getNotes(userId)
-        }
-    }
-
-
-
-    fun getNotes(userId: String) {
-        _noteState.value = NoteState.Loading
-        viewModelScope.launch {
-            try {
-                val response = noteRepository.getNotes(userId)
-                if (response.isSuccessful) {
-                    val allNotes = response.body() ?: emptyList()
-                    _noteState.value = NoteState.Success(allNotes)
-                } else {
-                    _noteState.value = NoteState.Error("Error fetching notes: ${response.message()}")
-                }
-            } catch (error: Exception) {
-                _noteState.value = NoteState.Error(error.message ?: "Unknown error")
+                val localNotes = noteRepository.getNotesOffline(userId)
+                _noteState.value = NoteState.Success(localNotes)
             }
         }
     }
 
-
-    fun updateNote(id: String, note: NoteDto, userId: String) {
+    fun updateNote(id: String, note: NoteDto, userId: String, isOffline: Boolean = false) {
         if (note.title.isNullOrBlank() || note.content.isNullOrBlank()) {
             _noteState.value = NoteState.Error("Title, subject or content can't be empty")
             return
@@ -75,36 +85,43 @@ class NoteViewModel @Inject constructor(
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
-                val updatedNote = noteRepository.updateNote(id, note)
-                if (updatedNote.isSuccessful) {
-                    getNotes(userId) // Recargar la lista de notas después de actualizar
+                if (isOffline) {
+                    noteRepository.updateNoteOffline(note.copy(id = id))
                 } else {
-                    _noteState.value = NoteState.Error("Failed to update note")
+                    val updatedNote = noteRepository.updateNote(id, note)
+                    if (!updatedNote.isSuccessful) {
+                        noteRepository.updateNoteOffline(note.copy(id = id))
+                    }
                 }
-            } catch (error: Exception) {
-                _noteState.value = NoteState.Error(error.message ?: "Unknown error")
+            } catch (e: Exception) {
+                noteRepository.updateNoteOffline(note.copy(id = id))
             }
+            getNotes(userId, isOffline)
         }
     }
 
-    fun deleteNote(id: String, userId: String) {
+
+    fun deleteNote(id: String, userId: String, isOffline: Boolean = false) {
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
             try {
-                val response = noteRepository.deleteNote(id)
-                if (response.isSuccessful) {
-                    getNotes(userId)
+                if (isOffline) {
+                    noteRepository.deleteNoteOffline(id)
                 } else {
-                    _noteState.value = NoteState.Error("Failed to delete note")
+                    val response = noteRepository.deleteNote(id)
+                    if (!response.isSuccessful) {
+                        noteRepository.deleteNoteOffline(id)
+                    }
                 }
-            } catch (error: Exception) {
-                _noteState.value = NoteState.Error(error.message ?: "Unknown error")
+            } catch (e: Exception) {
+                noteRepository.deleteNoteOffline(id)
             }
+            getNotes(userId, isOffline)
         }
     }
 
-
 }
+
 
 
 sealed class NoteState {
