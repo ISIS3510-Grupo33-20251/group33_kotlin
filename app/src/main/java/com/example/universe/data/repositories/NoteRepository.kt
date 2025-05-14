@@ -100,7 +100,6 @@ class NoteRepository @Inject constructor(
         }
     }
 
-    // ✅ Nuevos métodos para caché
 
     suspend fun getCachedNotes(userId: String): List<NoteDto> {
         return noteDao.getNotesByUser(userId).map { NoteMapper.toDto(it) }

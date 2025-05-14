@@ -1,5 +1,10 @@
 package com.example.universe.presentation.assignments
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -31,6 +36,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import com.example.universe.presentation.auth.AuthState
 import com.example.universe.presentation.auth.AuthViewModel
 
@@ -50,6 +56,43 @@ fun AssignmentsScreen(
     var isEditing by remember { mutableStateOf(false) }
     var noteId by remember { mutableStateOf<String?>(null) }
 
+    // Add internet connection state
+    var isConnected by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+
+    // Monitor network connectivity
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    // Check current connection state immediately when entering the screen
+    val activeNetwork = connectivityManager.activeNetwork
+    val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+    isConnected = networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+
+    val networkCallback = remember {
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                isConnected = true
+            }
+
+            override fun onLost(network: Network) {
+                isConnected = false
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        val networkRequest = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+
+        connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+
+        // Cleanup when leaving composition
+        onDispose {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+        }
+    }
+
     val noteState by noteViewModel.noteState.collectAsState()
     val authViewModel: AuthViewModel = hiltViewModel()
     val currentUser = (authViewModel.authState.collectAsState().value as? AuthState.Authenticated)?.user
@@ -60,8 +103,6 @@ fun AssignmentsScreen(
             noteViewModel.getNotes(userId)
         }
     }
-
-    val context = LocalContext.current // Context for Toast
 
     Box(
         modifier = Modifier
@@ -90,6 +131,37 @@ fun AssignmentsScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Display no internet connection message
+            if (!isConnected) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    backgroundColor = Color(0xFFFFF3CD),
+                    elevation = 0.dp,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Warning",
+                            tint = Color(0xFF856404),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "You are offline. Your notes will sync when you're back online",
+                            color = Color(0xFF856404),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
 
             when (noteState) {
                 is NoteState.Loading -> {
@@ -255,9 +327,7 @@ fun AssignmentsScreen(
                                     noteViewModel.updateNote(noteId!!, note, userId!!)
                                 } else {
                                     noteViewModel.createNote(note, userId!!)
-
                                 }
-
 
                                 showDialog = false
                                 noteId = null

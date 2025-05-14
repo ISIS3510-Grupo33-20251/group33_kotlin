@@ -62,6 +62,7 @@ class NoteViewModel @Inject constructor(
                 if (isOffline) {
                     val localNotes = noteRepository.getNotesOffline(userId)
                     _noteState.value = NoteState.Success(localNotes)
+
                 } else {
                     val response = noteRepository.getNotes(userId)
                     if (response.isSuccessful) {
