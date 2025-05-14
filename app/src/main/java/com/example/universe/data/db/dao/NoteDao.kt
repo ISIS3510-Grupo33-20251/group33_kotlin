@@ -10,8 +10,7 @@ import com.example.universe.data.db.entity.NoteEntity
 
 @Dao
 interface NoteDao {
-    @Query("SELECT * FROM notes WHERE owner_id = :userId")
-    suspend fun getNotesByUser(userId: String): List<NoteEntity>
+
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNote(note: NoteEntity)
@@ -27,4 +26,13 @@ interface NoteDao {
 
     @Update
     suspend fun updateNote(note: NoteEntity)
+
+    @Query("SELECT * FROM notes WHERE id = :id")
+    suspend fun getNoteById(id: String): NoteEntity?
+
+    @Query("SELECT * FROM notes WHERE owner_id = :userId AND deleted = 0")
+    suspend fun getNotesByUser(userId: String): List<NoteEntity>
+
+    @Query("DELETE FROM notes WHERE id = :id")
+    suspend fun deleteNote(id: String)
 }

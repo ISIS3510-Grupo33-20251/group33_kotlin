@@ -13,5 +13,6 @@ data class NoteEntity(
     val created_date: String?,
     val last_modified: String?,
     val owner_id: String?,
-    val isSynced: Boolean = false // clave para conectividad eventual
+    val isSynced: Boolean = false, // clave para conectividad eventual
+    val deleted: Boolean = false
 )
