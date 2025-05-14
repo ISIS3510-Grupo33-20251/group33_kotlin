@@ -19,6 +19,9 @@ class NoteViewModel @Inject constructor(
     private val noteRepository: NoteRepository
 ) : ViewModel() {
 
+    private val _networkStatus = MutableStateFlow<NetworkStatus>(NetworkStatus.Available)
+    val networkStatus: StateFlow<NetworkStatus> = _networkStatus.asStateFlow()
+
     private val _noteState = MutableStateFlow<NoteState>(NoteState.Initial)
     val noteState: StateFlow<NoteState> = _noteState.asStateFlow()
 
@@ -45,7 +48,6 @@ class NoteViewModel @Inject constructor(
                 }
                 getNotes(userId, isOffline)
             } catch (error: Exception) {
-                // fallback a local si ocurre error
                 noteRepository.createNoteOffline(note)
                 getNotes(userId, isOffline = true)
                 _noteState.value = NoteState.Error("Error online: guardado offline")
@@ -64,16 +66,28 @@ class NoteViewModel @Inject constructor(
                     val response = noteRepository.getNotes(userId)
                     if (response.isSuccessful) {
                         val allNotes = response.body() ?: emptyList()
+                        // Cachear las notas exitosamente obtenidas
+                        noteRepository.cacheNotes(allNotes)
                         _noteState.value = NoteState.Success(allNotes)
                     } else {
-                        // fallback a local
-                        val localNotes = noteRepository.getNotesOffline(userId)
-                        _noteState.value = NoteState.Success(localNotes)
+                        // Fallback a caché
+                        val cachedNotes = noteRepository.getCachedNotes(userId)
+                        if (cachedNotes.isNotEmpty()) {
+                            _noteState.value = NoteState.Success(cachedNotes)
+                        } else {
+                            val localNotes = noteRepository.getNotesOffline(userId)
+                            _noteState.value = NoteState.Success(localNotes)
+                        }
                     }
                 }
             } catch (error: Exception) {
-                val localNotes = noteRepository.getNotesOffline(userId)
-                _noteState.value = NoteState.Success(localNotes)
+                val cachedNotes = noteRepository.getCachedNotes(userId)
+                if (cachedNotes.isNotEmpty()) {
+                    _noteState.value = NoteState.Success(cachedNotes)
+                } else {
+                    val localNotes = noteRepository.getNotesOffline(userId)
+                    _noteState.value = NoteState.Success(localNotes)
+                }
             }
         }
     }
@@ -102,7 +116,6 @@ class NoteViewModel @Inject constructor(
         }
     }
 
-
     fun deleteNote(id: String, userId: String, isOffline: Boolean = false) {
         _noteState.value = NoteState.Loading
         viewModelScope.launch {
@@ -125,14 +138,13 @@ class NoteViewModel @Inject constructor(
     fun observeNetworkAndSync(networkObserver: NetworkConnectivityObserver) {
         viewModelScope.launch {
             networkObserver.observe().collect { status ->
+                _networkStatus.value = status
                 if (status == NetworkStatus.Available) {
                     noteRepository.syncPendingNotes()
                 }
             }
         }
     }
-
-
 }
 
 

@@ -35,19 +35,15 @@ class NoteRepository @Inject constructor(
 
     suspend fun deleteNote(id: String): Response<Unit> {
         try {
-            // Eliminar la nota en el servidor
             val response = api.deleteNote(id)
             if (response.isSuccessful) {
-                // Si la eliminación fue exitosa en el servidor, eliminar también la nota localmente
                 noteDao.deleteNoteById(id)
             }
             return response
         } catch (e: Exception) {
-            // En caso de error, simplemente retorna el error (puedes manejarlo más detalladamente si lo deseas)
             throw e
         }
     }
-
 
     suspend fun addNoteToUser(userId: String, noteId: String): Response<Unit> {
         return apiUser.addNoteToUser(userId, noteId)
@@ -70,7 +66,6 @@ class NoteRepository @Inject constructor(
     suspend fun deleteNoteOffline(noteId: String) {
         val note = noteDao.getNoteById(noteId)
         if (note != null) {
-            // Marcar como eliminada sin borrarla aún
             val deletedNote = note.copy(deleted = true, isSynced = false)
             noteDao.updateNote(deletedNote)
         }
@@ -84,36 +79,37 @@ class NoteRepository @Inject constructor(
                 val noteDto = NoteMapper.toDto(noteEntity)
 
                 if (noteEntity.deleted) {
-                    // Si la nota está eliminada, intentamos eliminarla en el servidor
                     val response = api.deleteNote(noteEntity.id)
                     if (response.isSuccessful) {
-                        // Eliminar la nota localmente si se elimina correctamente en el servidor
                         noteDao.deleteNoteById(noteEntity.id)
-                    } else {
-                        // Si no fue exitosa la eliminación, se puede manejar con alguna lógica adicional si es necesario
                     }
                 } else {
-                    // Si no está marcada como eliminada, procedemos a crearla en el servidor
                     val response = api.createNote(noteDto)
                     if (response.isSuccessful) {
                         val syncedNote = response.body()
                         if (syncedNote != null) {
-                            // Insertar la nota sincronizada y marcarla como sincronizada
                             noteDao.insertNote(NoteMapper.fromDto(syncedNote).copy(isSynced = true))
-
-                            // Agregar la nota al usuario en el servidor
                             apiUser.addNoteToUser(syncedNote.owner_id!!, syncedNote.id!!)
-
-                            // Eliminar la nota local después de sincronizarla si no estaba marcada como eliminada
                             noteDao.deleteNoteById(noteEntity.id)
                         }
                     }
                 }
-            } catch (e: Exception) {
-                // Si hay un error, no pasa nada, volverá a intentar en el próximo ciclo
+            } catch (_: Exception) {
+                // Ignorar errores para reintentar en otro ciclo
             }
         }
     }
 
-}
+    // ✅ Nuevos métodos para caché
 
+    suspend fun getCachedNotes(userId: String): List<NoteDto> {
+        return noteDao.getNotesByUser(userId).map { NoteMapper.toDto(it) }
+    }
+
+    suspend fun cacheNotes(notes: List<NoteDto>) {
+        notes.forEach {
+            val entity = NoteMapper.fromDto(it).copy(isSynced = true, deleted = false)
+            noteDao.insertNote(entity)
+        }
+    }
+}
