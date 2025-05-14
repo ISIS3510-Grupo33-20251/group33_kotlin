@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val authViewModel: AuthViewModel = hiltViewModel()
                     val locationViewModel: LocationViewModel = hiltViewModel()
-                    val noteViewModel: NoteViewModel = hiltViewModel() // 👈 importante
+                    val noteViewModel: NoteViewModel = hiltViewModel()
                     val authState by authViewModel.authState.collectAsState()
 
                     LaunchedEffect(Unit) {
