@@ -3,6 +3,7 @@ package com.example.universe.di
 import android.content.Context
 import androidx.room.Room
 import com.example.universe.data.db.AppDatabase
+import com.example.universe.data.db.dao.FlashcardDao
 import com.example.universe.data.db.dao.FriendDao
 import com.example.universe.data.db.dao.MeetingDao
 import com.example.universe.data.db.dao.NoteDao
@@ -42,6 +43,11 @@ object DatabaseModule {
     @Provides
     fun provideNoteDao(database: AppDatabase): NoteDao {
         return database.noteDao()
+    }
+
+    @Provides
+    fun provideFlashcardDao(database: AppDatabase): FlashcardDao {
+        return database.flashcardDao()
     }
 
 }
