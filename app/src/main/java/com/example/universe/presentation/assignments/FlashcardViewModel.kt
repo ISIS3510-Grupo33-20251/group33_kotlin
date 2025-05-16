@@ -21,13 +21,28 @@ class FlashcardViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _loading = MutableStateFlow(false)
+    val loading: StateFlow<Boolean> = _loading
+
     fun fetchFlashcards(userId: String, subject: String) {
         viewModelScope.launch {
+            _loading.value = true
+            _error.value = null
             try {
-                _flashcards.value = repository.getFlashcards(userId, subject)
+                val data = repository.getFlashcards(userId, subject)
+                _flashcards.value = data
             } catch (e: Exception) {
-                _error.value = "Error al obtener flashcards: ${e.localizedMessage}"
+                _error.value = "Error al obtener flashcards: ${e.localizedMessage ?: "Desconocido"}"
+            } finally {
+                _loading.value = false
             }
+        }
+    }
+
+    fun clearCache() {
+        viewModelScope.launch {
+            repository.clearAllCache()
+            _flashcards.value = emptyList()
         }
     }
 }
