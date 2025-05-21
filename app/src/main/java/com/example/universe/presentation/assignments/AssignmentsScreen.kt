@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import com.example.universe.presentation.auth.AuthState
 import com.example.universe.presentation.auth.AuthViewModel
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 
 
 @Composable
@@ -47,6 +49,7 @@ fun AssignmentsScreen(
     onScheduleClick: () -> Unit,
     onAssignmentsClick: () -> Unit,
     onFlashcardsClick: () -> Unit,
+    onCalculatorClick: () -> Unit,
     noteViewModel: NoteViewModel = hiltViewModel()
 ) {
     var showDialog by remember { mutableStateOf(false) }
@@ -56,14 +59,9 @@ fun AssignmentsScreen(
     var isEditing by remember { mutableStateOf(false) }
     var noteId by remember { mutableStateOf<String?>(null) }
 
-    // Add internet connection state
     var isConnected by remember { mutableStateOf(true) }
     val context = LocalContext.current
-
-    // Monitor network connectivity
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-    // Check current connection state immediately when entering the screen
     val activeNetwork = connectivityManager.activeNetwork
     val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
     isConnected = networkCapabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
@@ -84,10 +82,7 @@ fun AssignmentsScreen(
         val networkRequest = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-
         connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
-
-        // Cleanup when leaving composition
         onDispose {
             connectivityManager.unregisterNetworkCallback(networkCallback)
         }
@@ -99,7 +94,7 @@ fun AssignmentsScreen(
     val userId = currentUser?.id
 
     LaunchedEffect(Unit) {
-        if(userId != null){
+        if (userId != null) {
             noteViewModel.getNotes(userId)
         }
     }
@@ -132,7 +127,6 @@ fun AssignmentsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Display no internet connection message
             if (!isConnected) {
                 Card(
                     modifier = Modifier
@@ -239,6 +233,21 @@ fun AssignmentsScreen(
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Note")
             }
 
+            // Botón de calculadora
+            FloatingActionButton(
+                onClick = { onCalculatorClick() },
+                backgroundColor = Color.DarkGray,
+                contentColor = Color.White,
+                shape = CircleShape,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(bottom = 180.dp, start = 24.dp)
+                    .size(56.dp)
+            ) {
+                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Calculator")
+            }
+
+            // Botón de flashcards
             FloatingActionButton(
                 onClick = { onFlashcardsClick() },
                 backgroundColor = Color.Black,
@@ -253,7 +262,7 @@ fun AssignmentsScreen(
             }
         }
 
-        // Diálogo para crear/editar/eliminar nota
+        // Diálogo
         if (showDialog) {
             AlertDialog(
                 onDismissRequest = {
@@ -279,7 +288,6 @@ fun AssignmentsScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
-
                         OutlinedTextField(
                             value = subject,
                             onValueChange = { subject = it },
@@ -287,7 +295,6 @@ fun AssignmentsScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
-
                         OutlinedTextField(
                             value = content,
                             onValueChange = { content = it },
@@ -351,16 +358,13 @@ fun AssignmentsScreen(
                             ) {
                                 Text("Delete")
                             }
-
                             Spacer(modifier = Modifier.width(8.dp))
                         }
-
                         OutlinedButton(
                             onClick = {
                                 showDialog = false
                                 noteId = null
-                            },
-                            colors = ButtonDefaults.outlinedButtonColors()
+                            }
                         ) {
                             Text("Cancel")
                         }

@@ -30,6 +30,7 @@ import com.example.universe.presentation.home.HomeScreen
 import com.example.universe.presentation.location.LocationViewModel
 import com.example.universe.ui.theme.UniverseTheme
 import com.example.universe.presentation.assignments.AssignmentsScreen
+import com.example.universe.presentation.assignments.CalculatorScreen
 import com.example.universe.presentation.assignments.FlashcardDetailScreen
 import com.example.universe.presentation.assignments.FlashcardsScreen
 import com.example.universe.presentation.assignments.NoteViewModel
@@ -60,7 +61,7 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(Unit) {
                         noteViewModel.observeNetworkAndSync(networkObserver)
                     }
-                    // Start location updates if user is authenticated
+
                     LaunchedEffect(authState) {
                         if (authState is AuthState.Authenticated) {
                             locationViewModel.startLocationUpdates()
@@ -101,14 +102,22 @@ fun AppNavHost(
         composable("login") {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate("register") },
-                onLoginSuccess = { navController.navigate("home") { popUpTo("welcome") { inclusive = true } } }
+                onLoginSuccess = {
+                    navController.navigate("home") {
+                        popUpTo("welcome") { inclusive = true }
+                    }
+                }
             )
         }
 
         composable("register") {
             RegisterScreen(
                 onNavigateToLogin = { navController.navigate("login") },
-                onRegisterSuccess = { navController.navigate("home") { popUpTo("welcome") { inclusive = true } } }
+                onRegisterSuccess = {
+                    navController.navigate("home") {
+                        popUpTo("welcome") { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -136,8 +145,6 @@ fun AppNavHost(
         }
 
         composable("reminders") {
-            // Reminder screen will go here
-            // For now, just show a text indicating this is the reminders screen
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("Reminders Screen")
             }
@@ -148,7 +155,9 @@ fun AppNavHost(
                 onRemindersClick = { navController.navigate("reminders") },
                 onScheduleClick = { navController.navigate("home") },
                 onAssignmentsClick = { navController.navigate("assignments") },
-                onFlashcardsClick = { navController.navigate("flashcards") }
+                onFlashcardsClick = { navController.navigate("flashcards") },
+                // ✅ Nueva navegación a la calculadora
+                onCalculatorClick = { navController.navigate("calculator") }
             )
         }
 
@@ -166,7 +175,9 @@ fun AppNavHost(
             )
         }
 
-
-
+        // ✅ NUEVO: Pantalla de la calculadora
+        composable("calculator") {
+            CalculatorScreen(navController = navController)
+        }
     }
 }
