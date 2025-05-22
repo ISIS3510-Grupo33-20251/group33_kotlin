@@ -31,14 +31,15 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
     val currentUser = (authViewModel.authState.collectAsState().value as? AuthState.Authenticated)?.user
     val ownerId = currentUser?.id
     val subjects by viewModel.subjects.collectAsState()
+
+    var selectedSubject by remember { mutableStateOf<CalculatorSubjectDto?>(null) }
     var grades by remember { mutableStateOf(listOf(GradeInput("", "", ""))) }
-    var isModo100 by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     var expanded by remember { mutableStateOf(false) }
     var showAddSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectName by remember { mutableStateOf("") }
 
-    // 👇 Cargar materias al ingresar
+    // Cargar materias al ingresar
     LaunchedEffect(Unit) {
         if (ownerId != null) {
             viewModel.loadSubjects(ownerId)
@@ -62,7 +63,7 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
                 )
             }
 
-            // 🔽 Dropdown menu con materias
+            // Dropdown con materias
             Box {
                 IconButton(onClick = { expanded = true }) {
                     Icon(
@@ -75,21 +76,31 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
-                    DropdownMenuItem(onClick = {
-                        showAddSubjectDialog = true
-                        expanded = false
-                    }) {
-                        Text("Add Subject")
+                    // Opción para volver a la base
+                    DropdownMenuItem(
+                        onClick = {
+                            selectedSubject = null
+                            grades = listOf(GradeInput("", "", ""))
+                            expanded = false
+                        }
+                    ) {
+                        Text("➕ New / Blank")
                     }
 
                     Divider()
 
-                    // 🔁 Materias como botones
+                    // Otras materias
                     subjects.forEach { subject ->
                         DropdownMenuItem(
                             onClick = {
-                                // En el futuro podrías seleccionar la materia actual
-                                println("Seleccionaste: ${subject.subject_name}")
+                                selectedSubject = subject
+                                grades = subject.entries.map {
+                                    GradeInput(
+                                        name = it.name,
+                                        percentage = it.percentage.toString(),
+                                        value = String.format("%.2f", it.grade)
+                                    )
+                                }
                                 expanded = false
                             }
                         ) {
@@ -97,30 +108,16 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
                         }
                     }
                 }
+
             }
         }
 
-        // ... 🔁 el resto de tu código continúa sin cambios ...
-
-
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("Grade Calculator", style = MaterialTheme.typography.h6)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 4.dp)
-        ) {
-            Text("Mode 0–5")
-            Switch(
-                checked = isModo100,
-                onCheckedChange = { isModo100 = it },
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-            Text("Mode 0–100")
-        }
+        Text(
+            "Grade Calculator${selectedSubject?.let { ": ${it.subject_name}" } ?: ""}",
+            style = MaterialTheme.typography.h6
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -137,8 +134,7 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
                     },
                     onDelete = {
                         grades = grades.toMutableList().also { it.removeAt(index) }
-                    },
-                    isModo100 = isModo100
+                    }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -164,12 +160,11 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
             val weightedTotal = grades.sumOf {
                 val rawValue = it.value.replace(',', '.').toDoubleOrNull() ?: 0.0
                 val percentage = it.percentage.toDoubleOrNull() ?: 0.0
-                val convertedValue = if (isModo100) (rawValue / 100.0) * 5.0 else rawValue
-                convertedValue * (percentage / 100.0)
+                rawValue * (percentage / 100.0)
             }
 
             Text("Total: %.2f%%".format(totalPercentage), fontSize = 18.sp)
-            Text("Weighted Grade: %.2f / 5.0".format(weightedTotal), fontSize = 18.sp)
+            Text("Weighted Grade: %.2f".format(weightedTotal), fontSize = 18.sp)
 
             if (weightedTotal >= 3.0) {
                 Text(
@@ -181,23 +176,73 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
             }
         }
 
-        // Botón inferior izquierdo "Delete Subject" (no funcional aún)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp),
-            horizontalArrangement = Arrangement.Start
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Button(
-                onClick = { /* lógica futura */ },
+                onClick = {
+                    showAddSubjectDialog = true
+                },
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1565C0))
+            ) {
+                Text("Add Subject", color = Color.White)
+            }
+
+            Button(
+                onClick = {
+                    selectedSubject?._id?.let { id ->
+                        ownerId?.let { owner ->
+                            viewModel.deleteSubject(id, owner)
+                            selectedSubject = null
+                            grades = listOf(GradeInput("", "", ""))
+                        }
+                    }
+                },
+                enabled = selectedSubject != null,
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFB71C1C))
             ) {
                 Text("Delete Subject", color = Color.White)
             }
+
+            Button(
+                onClick = {
+                    selectedSubject?.let { subject ->
+                        val updatedEntries = grades.mapNotNull { grade ->
+                            val name = grade.name.trim()
+                            val percentage = grade.percentage.replace(',', '.').toDoubleOrNull()
+                            val value = grade.value.replace(',', '.').toDoubleOrNull()
+                            if (name.isNotBlank() && percentage != null && value != null) {
+                                GradeEntryDto(
+                                    name = name,
+                                    percentage = percentage,
+                                    grade = value
+                                )
+                            } else null
+                        }
+
+                        if (ownerId != null && subject._id != null) {
+                            val cleanedSubject = CalculatorSubjectDto(
+                                subject_name = subject.subject_name,
+                                owner_id = subject.owner_id,
+                                entries = updatedEntries
+                            )
+
+                            viewModel.updateSubject(subject._id, cleanedSubject)
+                        }
+                    }
+                },
+                enabled = selectedSubject != null,
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1B5E20))
+            ) {
+                Text("Save Changes", color = Color.White)
+            }
         }
     }
 
-    // Diálogo para agregar nueva materia
+    // Diálogo para nueva materia
     if (showAddSubjectDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -224,7 +269,7 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
                                 GradeEntryDto(
                                     name = grade.name,
                                     percentage = percentage,
-                                    grade = if (isModo100) (value / 100.0) * 5.0 else value
+                                    grade = value
                                 )
                             } else null
                         }
@@ -236,11 +281,9 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
                         )
 
                         viewModel.createSubject(subject) {
-                            // callback tras creación exitosa
                             viewModel.loadSubjects(ownerId)
                         }
 
-                        // Reset UI
                         showAddSubjectDialog = false
                         newSubjectName = ""
                         grades = listOf(GradeInput("", "", ""))
@@ -248,8 +291,7 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
                 }) {
                     Text("Save")
                 }
-            }
-            ,
+            },
             dismissButton = {
                 TextButton(onClick = {
                     showAddSubjectDialog = false
@@ -263,12 +305,13 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
 }
 
 
+
+
 @Composable
 fun GradeInputRow(
     grade: GradeInput,
     onUpdate: (GradeInput) -> Unit,
-    onDelete: () -> Unit,
-    isModo100: Boolean
+    onDelete: () -> Unit
 ) {
     val percentageValue = grade.percentage.toDoubleOrNull()
     val percentageError = grade.percentage.isNotEmpty() && percentageValue == null
@@ -277,11 +320,7 @@ fun GradeInputRow(
     val valueFormatted = grade.value.replace(',', '.')
     val valueParsed = valueFormatted.toDoubleOrNull()
     val valueError = grade.value.isNotEmpty() && valueParsed == null
-    val valueOutOfRange = valueParsed != null && (
-            valueParsed < 0.0 ||
-                    (isModo100 && valueParsed > 100.0) ||
-                    (!isModo100 && valueParsed > 5.0)
-            )
+    val valueOutOfRange = valueParsed != null && (valueParsed < 0.0 || valueParsed > 5.0)  // CAMBIO aquí
 
     Column {
         Row(
@@ -315,13 +354,13 @@ fun GradeInputRow(
                     val doubleVal = newVal.toDoubleOrNull()
                     val isValid = doubleVal != null &&
                             doubleVal >= 0.0 &&
-                            ((isModo100 && doubleVal <= 100.0) || (!isModo100 && doubleVal <= 5.0))
+                            doubleVal <= 5.0  // CAMBIO aquí
 
                     if (isValid || it.isEmpty()) {
                         onUpdate(grade.copy(value = it))
                     }
                 },
-                label = { Text(if (isModo100) "Grade (0–100)" else "Grade (0–5)") },
+                label = { Text("Grade (0–5)") }, // CAMBIO aquí
                 modifier = Modifier.width(100.dp),
                 isError = valueError || valueOutOfRange
             )
@@ -340,7 +379,8 @@ fun GradeInputRow(
                 color = MaterialTheme.colors.error,
                 fontSize = 12.sp
             )
-        } else if (percentageOutOfRange) {
+        }
+        if (percentageOutOfRange) {
             Text(
                 text = "Percentage must be between 0 and 100",
                 color = MaterialTheme.colors.error,
@@ -349,19 +389,21 @@ fun GradeInputRow(
         }
         if (valueError) {
             Text(
-                text = "Only numeric values are allowed in Grade",
+                text = "Only numeric values are allowed in grade",
                 color = MaterialTheme.colors.error,
                 fontSize = 12.sp
             )
-        } else if (valueOutOfRange) {
+        }
+        if (valueOutOfRange) {
             Text(
-                text = if (isModo100) "Grade must be between 0 and 100" else "Grade must be between 0 and 5",
+                text = "Grade must be between 0 and 5",  // CAMBIO aquí
                 color = MaterialTheme.colors.error,
                 fontSize = 12.sp
             )
         }
     }
 }
+
 
 data class GradeInput(
     val name: String,

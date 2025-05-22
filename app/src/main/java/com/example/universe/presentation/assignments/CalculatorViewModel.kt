@@ -22,6 +22,8 @@ class CalculatorViewModel @Inject constructor(
     private val _selectedSubject = MutableStateFlow<CalculatorSubjectDto?>(null)
     val selectedSubject: StateFlow<CalculatorSubjectDto?> = _selectedSubject
 
+
+
     fun loadSubjects(ownerId: String) {
         viewModelScope.launch {
             _subjects.value = repository.getSubjectsByUser(ownerId)
@@ -47,12 +49,10 @@ class CalculatorViewModel @Inject constructor(
     }
 
 
-    fun updateSubject(subject: CalculatorSubjectDto) {
+    fun updateSubject(subjectId: String, updatedSubject: CalculatorSubjectDto) {
         viewModelScope.launch {
-            subject._id?.let {
-                repository.updateSubject(it, subject)
-                loadSubjects(subject.owner_id)
-            }
+            repository.updateSubject(subjectId, updatedSubject)
+            loadSubjects(updatedSubject.owner_id)
         }
     }
 
