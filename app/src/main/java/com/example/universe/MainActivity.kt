@@ -1,6 +1,8 @@
 package com.example.universe
 
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -34,6 +36,7 @@ import com.example.universe.presentation.assignments.CalculatorScreen
 import com.example.universe.presentation.assignments.FlashcardDetailScreen
 import com.example.universe.presentation.assignments.FlashcardsScreen
 import com.example.universe.presentation.assignments.NoteViewModel
+import com.example.universe.presentation.reminders.RemindersScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -46,6 +49,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Handle notification tap
+        handleNotificationIntent(intent)
         setContent {
             UniverseTheme {
                 Surface(
@@ -77,7 +82,24 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.let { handleNotificationIntent(it) }
+    }
+
+    private fun handleNotificationIntent(intent: Intent) {
+        val reminderId = intent.getStringExtra("reminder_id")
+        val entityType = intent.getStringExtra("entity_type")
+        val entityId = intent.getStringExtra("entity_id")
+
+        if (reminderId != null) {
+            Log.d("MainActivity", "Opened from reminder: $reminderId")
+        }
+    }
 }
+
+
 
 @Composable
 fun AppNavHost(
@@ -145,9 +167,12 @@ fun AppNavHost(
         }
 
         composable("reminders") {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Reminders Screen")
-            }
+            RemindersScreen(
+                onBackClick = { navController.navigateUp() },
+                onRemindersClick = { /* Already on reminders */ },
+                onScheduleClick = { navController.navigate("home") },
+                onAssignmentsClick = { navController.navigate("assignments") }
+            )
         }
 
         composable("assignments") {
@@ -175,7 +200,6 @@ fun AppNavHost(
             )
         }
 
-        // ✅ NUEVO: Pantalla de la calculadora
         composable("calculator") {
             CalculatorScreen(navController = navController)
         }
