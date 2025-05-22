@@ -1,5 +1,6 @@
 package com.example.universe.presentation.assignments
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.universe.data.models.CalculatorSubjectDto
@@ -23,10 +24,15 @@ class CalculatorViewModel @Inject constructor(
     val selectedSubject: StateFlow<CalculatorSubjectDto?> = _selectedSubject
 
 
-
     fun loadSubjects(ownerId: String) {
         viewModelScope.launch {
-            _subjects.value = repository.getSubjectsByUser(ownerId)
+            try {
+                val result = repository.getSubjectsByUser(ownerId)
+                _subjects.value = result
+            } catch (e: Exception) {
+                Log.e("CalculatorViewModel", "Error loading subjects", e)
+                _subjects.value = emptyList()
+            }
         }
     }
 
