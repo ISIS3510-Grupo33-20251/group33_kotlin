@@ -8,6 +8,7 @@ import com.example.universe.data.api.FlashcardApiService
 import com.example.universe.data.api.MeetingApiService
 import com.example.universe.data.api.UserApiService
 import com.example.universe.data.api.NoteApiService
+import com.example.universe.data.api.ReminderApiService
 import com.example.universe.data.repositories.NetworkConnectivityObserverImpl
 import com.example.universe.domain.repositories.NetworkConnectivityObserver
 import com.google.gson.Gson
@@ -104,6 +105,12 @@ object NetworkModule {
     @Singleton
     fun provideCalculatorApiService(retrofit: Retrofit): CalculatorApiService {
         return retrofit.create(CalculatorApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideReminderApiService(retrofit: Retrofit): ReminderApiService {
+        return retrofit.create(ReminderApiService::class.java)
     }
 
 }

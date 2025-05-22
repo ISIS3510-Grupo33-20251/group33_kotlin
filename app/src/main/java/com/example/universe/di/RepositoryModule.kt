@@ -5,12 +5,14 @@ import com.example.universe.data.repositories.FriendLocationRepositoryImpl
 import com.example.universe.data.repositories.FriendRepositoryImpl
 import com.example.universe.data.repositories.LocationRepositoryImpl
 import com.example.universe.data.repositories.MeetingRepositoryImpl
+import com.example.universe.data.repositories.ReminderRepositoryImpl
 import com.example.universe.data.repositories.ScheduleRepositoryImpl
 import com.example.universe.domain.repositories.AuthRepository
 import com.example.universe.domain.repositories.FriendLocationRepository
 import com.example.universe.domain.repositories.FriendRepository
 import com.example.universe.domain.repositories.LocationRepository
 import com.example.universe.domain.repositories.MeetingRepository
+import com.example.universe.domain.repositories.ReminderRepository
 import com.example.universe.domain.repositories.ScheduleRepository
 import dagger.Binds
 import dagger.Module
@@ -56,5 +58,11 @@ abstract class RepositoryModule {
     abstract fun bindFriendLocationRepository(
         friendLocationRepositoryImpl: FriendLocationRepositoryImpl
     ): FriendLocationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReminderRepository(
+        reminderRepositoryImpl: ReminderRepositoryImpl
+    ): ReminderRepository
 
 }
