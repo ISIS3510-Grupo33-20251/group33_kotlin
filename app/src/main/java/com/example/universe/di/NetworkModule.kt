@@ -3,6 +3,7 @@ package com.example.universe.di
 import android.content.Context
 import android.net.ConnectivityManager
 import com.example.universe.data.api.AuthApiService
+import com.example.universe.data.api.CalculatorApiService
 import com.example.universe.data.api.FlashcardApiService
 import com.example.universe.data.api.MeetingApiService
 import com.example.universe.data.api.UserApiService
@@ -99,5 +100,10 @@ object NetworkModule {
         return retrofit.create(FlashcardApiService::class.java)
     }
 
+    @Provides
+    @Singleton
+    fun provideCalculatorApiService(retrofit: Retrofit): CalculatorApiService {
+        return retrofit.create(CalculatorApiService::class.java)
+    }
 
 }

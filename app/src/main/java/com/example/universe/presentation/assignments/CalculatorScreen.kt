@@ -1,54 +1,107 @@
 package com.example.universe.presentation.assignments
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 
 
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.runtime.*
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.navigation.NavController
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.compose.rememberNavController
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.universe.data.models.CalculatorSubjectDto
+import com.example.universe.data.models.GradeEntryDto
+import com.example.universe.presentation.auth.AuthState
+import com.example.universe.presentation.auth.AuthViewModel
 
 
 @Composable
-fun CalculatorScreen(navController: NavController) {
+fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewModel = hiltViewModel()) {
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val currentUser = (authViewModel.authState.collectAsState().value as? AuthState.Authenticated)?.user
+    val ownerId = currentUser?.id
+    val subjects by viewModel.subjects.collectAsState()
     var grades by remember { mutableStateOf(listOf(GradeInput("", "", ""))) }
     var isModo100 by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
+    var expanded by remember { mutableStateOf(false) }
+    var showAddSubjectDialog by remember { mutableStateOf(false) }
+    var newSubjectName by remember { mutableStateOf("") }
+
+    // 👇 Cargar materias al ingresar
+    LaunchedEffect(Unit) {
+        if (ownerId != null) {
+            viewModel.loadSubjects(ownerId)
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        IconButton(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier.align(Alignment.Start)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back"
-            )
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back"
+                )
+            }
+
+            // 🔽 Dropdown menu con materias
+            Box {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Menu"
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    DropdownMenuItem(onClick = {
+                        showAddSubjectDialog = true
+                        expanded = false
+                    }) {
+                        Text("Add Subject")
+                    }
+
+                    Divider()
+
+                    // 🔁 Materias como botones
+                    subjects.forEach { subject ->
+                        DropdownMenuItem(
+                            onClick = {
+                                // En el futuro podrías seleccionar la materia actual
+                                println("Seleccionaste: ${subject.subject_name}")
+                                expanded = false
+                            }
+                        ) {
+                            Text(subject.subject_name)
+                        }
+                    }
+                }
+            }
         }
+
+        // ... 🔁 el resto de tu código continúa sin cambios ...
+
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -127,8 +180,88 @@ fun CalculatorScreen(navController: NavController) {
                 )
             }
         }
+
+        // Botón inferior izquierdo "Delete Subject" (no funcional aún)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Button(
+                onClick = { /* lógica futura */ },
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFB71C1C))
+            ) {
+                Text("Delete Subject", color = Color.White)
+            }
+        }
+    }
+
+    // Diálogo para agregar nueva materia
+    if (showAddSubjectDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showAddSubjectDialog = false
+                newSubjectName = ""
+            },
+            title = { Text("Add New Subject") },
+            text = {
+                OutlinedTextField(
+                    value = newSubjectName,
+                    onValueChange = { newSubjectName = it },
+                    label = { Text("Subject Name") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (ownerId != null && newSubjectName.isNotBlank()) {
+                        val entries = grades.mapNotNull { grade ->
+                            val percentage = grade.percentage.replace(',', '.').toDoubleOrNull()
+                            val value = grade.value.replace(',', '.').toDoubleOrNull()
+
+                            if (percentage != null && value != null) {
+                                GradeEntryDto(
+                                    name = grade.name,
+                                    percentage = percentage,
+                                    grade = if (isModo100) (value / 100.0) * 5.0 else value
+                                )
+                            } else null
+                        }
+
+                        val subject = CalculatorSubjectDto(
+                            subject_name = newSubjectName,
+                            owner_id = ownerId,
+                            entries = entries
+                        )
+
+                        viewModel.createSubject(subject) {
+                            // callback tras creación exitosa
+                            viewModel.loadSubjects(ownerId)
+                        }
+
+                        // Reset UI
+                        showAddSubjectDialog = false
+                        newSubjectName = ""
+                        grades = listOf(GradeInput("", "", ""))
+                    }
+                }) {
+                    Text("Save")
+                }
+            }
+            ,
+            dismissButton = {
+                TextButton(onClick = {
+                    showAddSubjectDialog = false
+                    newSubjectName = ""
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
+
 
 @Composable
 fun GradeInputRow(
