@@ -17,7 +17,7 @@ import com.example.universe.data.db.entity.SubjectEntity
 
 @Database(
     entities = [MeetingEntity::class, FriendEntity::class, NoteEntity::class, FlashcardEntity::class, ReminderEntity::class, SubjectEntity::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

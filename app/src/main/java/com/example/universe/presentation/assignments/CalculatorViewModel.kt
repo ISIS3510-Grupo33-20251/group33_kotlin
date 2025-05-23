@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.universe.data.models.CalculatorSubjectDto
 import com.example.universe.data.repositories.CalculatorRepository
+import com.example.universe.domain.repositories.NetworkConnectivityObserver
+import com.example.universe.domain.repositories.NetworkStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -22,6 +25,8 @@ class CalculatorViewModel @Inject constructor(
     private val _selectedSubject = MutableStateFlow<CalculatorSubjectDto?>(null)
     val selectedSubject: StateFlow<CalculatorSubjectDto?> = _selectedSubject
 
+    private val _networkStatus = MutableStateFlow<NetworkStatus>(NetworkStatus.Available)
+    val networkStatus: StateFlow<NetworkStatus> = _networkStatus.asStateFlow()
 
 
     fun loadSubjects(ownerId: String) {
@@ -60,6 +65,17 @@ class CalculatorViewModel @Inject constructor(
         viewModelScope.launch {
             repository.deleteSubject(subjectId)
             loadSubjects(ownerId)
+        }
+    }
+
+    fun observeNetworkAndSync(networkObserver: NetworkConnectivityObserver) {
+        viewModelScope.launch {
+            networkObserver.observe().collect { status ->
+                _networkStatus.value = status
+                if (status == NetworkStatus.Available) {
+                    repository.syncPendingSubjects()
+                }
+            }
         }
     }
 }

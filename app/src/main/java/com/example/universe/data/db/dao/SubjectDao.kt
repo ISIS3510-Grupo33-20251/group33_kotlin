@@ -21,4 +21,11 @@ interface SubjectDao {
 
     @Delete
     suspend fun deleteSubject(subject: SubjectEntity)
+
+    @Query("SELECT * FROM subjects WHERE isSynced = 0")
+    suspend fun getPendingSubjects(): List<SubjectEntity>
+
+    @Query("DELETE FROM subjects WHERE id = :id")
+    suspend fun deleteSubjectById(id: String)
+
 }

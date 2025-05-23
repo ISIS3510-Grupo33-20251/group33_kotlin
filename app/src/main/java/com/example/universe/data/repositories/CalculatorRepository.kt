@@ -50,17 +50,13 @@ class CalculatorRepository @Inject constructor(
     }
 
     suspend fun updateSubject(subjectId: String, updatedSubject: CalculatorSubjectDto): String {
-        val subjectWithId = updatedSubject.copy(_id = subjectId)
-
         try {
-            // Intentar actualizar remotamente
-            val response = api.updateSubject(subjectId, subjectWithId)
-            // Actualizar también en base local
-            subjectDao.insertSubject(dtoToEntity(subjectWithId))
+            // Enviar DTO sin _id en el body
+            val response = api.updateSubject(subjectId, updatedSubject)
+            subjectDao.insertSubject(dtoToEntity(updatedSubject.copy(_id = subjectId)))
             return response["message"] ?: "Updated remotely"
         } catch (e: Exception) {
-            // Fallback: actualizar solo en local
-            subjectDao.insertSubject(dtoToEntity(subjectWithId))
+            subjectDao.insertSubject(dtoToEntity(updatedSubject.copy(_id = subjectId)))
             return "Updated locally (pending sync)"
         }
     }
@@ -83,15 +79,18 @@ class CalculatorRepository @Inject constructor(
     }
 
 
-    private fun dtoToEntity(dto: CalculatorSubjectDto): SubjectEntity =
+    private fun dtoToEntity(dto: CalculatorSubjectDto, isSynced: Boolean = false, deleted: Boolean = false): SubjectEntity =
         SubjectEntity(
             id = dto._id ?: UUID.randomUUID().toString(),
             subjectName = dto.subject_name,
             ownerId = dto.owner_id,
             entriesJson = gson.toJson(dto.entries),
             createdDate = dto.created_date,
-            lastModified = dto.last_modified
+            lastModified = dto.last_modified,
+            isSynced = isSynced,
+            deleted = deleted
         )
+
 
     private fun entityToDto(entity: SubjectEntity): CalculatorSubjectDto =
         CalculatorSubjectDto(
@@ -102,5 +101,54 @@ class CalculatorRepository @Inject constructor(
             created_date = entity.createdDate,
             last_modified = entity.lastModified
         )
+
+    suspend fun syncPendingSubjects() {
+        val pendingSubjects = subjectDao.getPendingSubjects()
+
+        for (entity in pendingSubjects) {
+            try {
+                val dto = entityToDto(entity)
+
+                if (entity.deleted) {
+                    // Intentar eliminar remotamente
+                    api.deleteSubject(entity.id)
+                    // Eliminar localmente
+                    subjectDao.deleteSubjectById(entity.id)
+                } else {
+                    // Verificar si el subject ya existe en el backend
+                    val existsOnServer = try {
+                        api.getSubject(entity.id)
+                        true
+                    } catch (e: Exception) {
+                        false
+                    }
+
+                    if (existsOnServer) {
+                        // Actualizar en el backend
+                        api.updateSubject(entity.id, dto)
+
+                        // Marcar como sincronizado localmente
+                        val syncedEntity = entity.copy(isSynced = true, deleted = false)
+                        subjectDao.insertSubject(syncedEntity)
+                    } else {
+                        // Crear en el backend
+                        val createdDto = api.createSubject(dto)
+
+                        if (createdDto._id != null && createdDto._id != entity.id) {
+                            // Si el backend generó un ID nuevo, borrar el viejo local y guardar el nuevo
+                            subjectDao.deleteSubjectById(entity.id)
+                            subjectDao.insertSubject(dtoToEntity(createdDto, isSynced = true, deleted = false))
+                        } else {
+                            // Si el backend respetó el ID, solo marcar como sincronizado
+                            val syncedEntity = entity.copy(isSynced = true, deleted = false)
+                            subjectDao.insertSubject(syncedEntity)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignorar errores para reintentar luego
+            }
+        }
+    }
 
 }

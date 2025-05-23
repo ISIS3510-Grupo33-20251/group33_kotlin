@@ -11,5 +11,6 @@ data class SubjectEntity(
     val entriesJson: String, // serializas las entradas como JSON
     val createdDate: String?,
     val lastModified: String?,
-    
+    val isSynced: Boolean = false, // nuevo campo para marcar sincronización pendiente
+    val deleted: Boolean = false
 )
