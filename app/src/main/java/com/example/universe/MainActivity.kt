@@ -33,6 +33,7 @@ import com.example.universe.presentation.location.LocationViewModel
 import com.example.universe.ui.theme.UniverseTheme
 import com.example.universe.presentation.assignments.AssignmentsScreen
 import com.example.universe.presentation.assignments.CalculatorScreen
+import com.example.universe.presentation.assignments.CalculatorViewModel
 import com.example.universe.presentation.assignments.FlashcardDetailScreen
 import com.example.universe.presentation.assignments.FlashcardsScreen
 import com.example.universe.presentation.assignments.NoteViewModel
@@ -62,9 +63,11 @@ class MainActivity : ComponentActivity() {
                     val locationViewModel: LocationViewModel = hiltViewModel()
                     val noteViewModel: NoteViewModel = hiltViewModel()
                     val authState by authViewModel.authState.collectAsState()
+                    val calculatorViewModel: CalculatorViewModel = hiltViewModel()
 
                     LaunchedEffect(Unit) {
                         noteViewModel.observeNetworkAndSync(networkObserver)
+                        calculatorViewModel.observeNetworkAndSync(networkObserver)
                     }
 
                     LaunchedEffect(authState) {

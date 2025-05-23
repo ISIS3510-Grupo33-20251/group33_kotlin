@@ -1,5 +1,11 @@
 package com.example.universe.presentation.assignments
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -11,13 +17,17 @@ import androidx.compose.ui.graphics.Color
 
 
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Warning
 import androidx.navigation.NavController
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.universe.data.models.CalculatorSubjectDto
 import com.example.universe.data.models.GradeEntryDto
@@ -39,11 +49,37 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
     var showAddSubjectDialog by remember { mutableStateOf(false) }
     var newSubjectName by remember { mutableStateOf("") }
 
+    // --- DETECCIÓN DE CONEXIÓN ---
+    var isConnected by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val connectivityManager = remember {
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+    val networkCallback = remember {
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) { isConnected = true }
+            override fun onLost(network: Network)    { isConnected = false }
+        }
+    }
+    DisposableEffect(Unit) {
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        // Estado inicial
+        val active = connectivityManager.activeNetwork
+        val caps   = connectivityManager.getNetworkCapabilities(active)
+        isConnected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+
+        connectivityManager.registerNetworkCallback(request, networkCallback)
+        onDispose {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+        }
+    }
+    // ------------------------------
+
     // Cargar materias al ingresar
     LaunchedEffect(Unit) {
-        if (ownerId != null) {
-            viewModel.loadSubjects(ownerId)
-        }
+        if (ownerId != null) viewModel.loadSubjects(ownerId)
     }
 
     Column(
@@ -57,58 +93,41 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { navController.popBackStack() }) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back"
-                )
+                Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
             }
 
             // Dropdown con materias
             Box {
                 IconButton(onClick = { expanded = true }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Menu"
-                    )
+                    Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Menu")
                 }
-
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     // Opción para volver a la base
-                    DropdownMenuItem(
-                        onClick = {
-                            selectedSubject = null
-                            grades = listOf(GradeInput("", "", ""))
-                            expanded = false
-                        }
-                    ) {
+                    DropdownMenuItem(onClick = {
+                        selectedSubject = null
+                        grades = listOf(GradeInput("", "", ""))
+                        expanded = false
+                    }) {
                         Text("➕ New / Blank")
                     }
-
                     Divider()
-
                     // Otras materias
                     subjects.forEach { subject ->
-                        DropdownMenuItem(
-                            onClick = {
-                                selectedSubject = subject
-                                grades = subject.entries.map {
-                                    GradeInput(
-                                        name = it.name,
-                                        percentage = it.percentage.toString(),
-                                        value = String.format("%.2f", it.grade)
-                                    )
-                                }
-                                expanded = false
+                        DropdownMenuItem(onClick = {
+                            selectedSubject = subject
+                            grades = subject.entries.map {
+                                GradeInput(
+                                    name = it.name,
+                                    percentage = it.percentage.toString(),
+                                    value = String.format("%.2f", it.grade)
+                                )
                             }
-                        ) {
+                            expanded = false
+                        }) {
                             Text(subject.subject_name)
                         }
                     }
                 }
-
             }
         }
 
@@ -120,6 +139,35 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
         )
 
         Spacer(modifier = Modifier.height(8.dp))
+        if (!isConnected) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                backgroundColor = Color(0xFFFFF3CD),
+                elevation = 0.dp,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Warning",
+                        tint = Color(0xFF856404),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "You are offline. Your data will sync when you're back online",
+                        color = Color(0xFF856404),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -142,9 +190,7 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = {
-                    grades = grades + GradeInput("", "", "")
-                },
+                onClick = { grades = grades + GradeInput("", "", "") },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1A2340))
             ) {
@@ -153,14 +199,10 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val totalPercentage = grades.sumOf {
-                it.percentage.toDoubleOrNull() ?: 0.0
-            }
-
-            val weightedTotal = grades.sumOf {
-                val rawValue = it.value.replace(',', '.').toDoubleOrNull() ?: 0.0
-                val percentage = it.percentage.toDoubleOrNull() ?: 0.0
-                rawValue * (percentage / 100.0)
+            val totalPercentage = grades.sumOf { it.percentage.toDoubleOrNull() ?: 0.0 }
+            val weightedTotal  = grades.sumOf {
+                val raw = it.value.replace(',', '.').toDoubleOrNull() ?: 0.0
+                raw * ((it.percentage.replace(',', '.').toDoubleOrNull() ?: 0.0) / 100.0)
             }
 
             Text("Total: %.2f%%".format(totalPercentage), fontSize = 18.sp)
@@ -176,68 +218,74 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
             }
         }
 
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+
+            // --- Aquí deshabilitamos el botón Add cuando hay una materia seleccionada ---
             Button(
-                onClick = {
-                    showAddSubjectDialog = true
-                },
+                onClick = { showAddSubjectDialog = true },
+                enabled = selectedSubject == null,
+                modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1565C0))
             ) {
-                Text("Add Subject", color = Color.White)
+                Text("Add", color = Color.White)
             }
 
             Button(
                 onClick = {
                     selectedSubject?._id?.let { id ->
-                        ownerId?.let { owner ->
-                            viewModel.deleteSubject(id, owner)
+                        ownerId?.let {
+                            viewModel.deleteSubject(id, it)
                             selectedSubject = null
                             grades = listOf(GradeInput("", "", ""))
                         }
                     }
                 },
                 enabled = selectedSubject != null,
+                modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFB71C1C))
             ) {
-                Text("Delete Subject", color = Color.White)
+                Text("Delete", color = Color.White)
             }
 
             Button(
                 onClick = {
                     selectedSubject?.let { subject ->
-                        val updatedEntries = grades.mapNotNull { grade ->
-                            val name = grade.name.trim()
-                            val percentage = grade.percentage.replace(',', '.').toDoubleOrNull()
-                            val value = grade.value.replace(',', '.').toDoubleOrNull()
-                            if (name.isNotBlank() && percentage != null && value != null) {
-                                GradeEntryDto(
-                                    name = name,
-                                    percentage = percentage,
-                                    grade = value
-                                )
-                            } else null
+                        val validEntries = grades.all { it.name.isNotBlank() && it.percentage.toDoubleOrNull() != null && it.value.toDoubleOrNull() != null }
+                        if (!validEntries) {
+                            Toast.makeText(context, "Please complete all fields correctly before saving", Toast.LENGTH_SHORT).show()
+                            return@let
+                        }
+
+                        val updatedEntries = grades.map {
+                            GradeEntryDto(
+                                name = it.name.trim(),
+                                percentage = it.percentage.replace(',', '.').toDouble(),
+                                grade = it.value.replace(',', '.').toDouble()
+                            )
                         }
 
                         if (ownerId != null && subject._id != null) {
-                            val cleanedSubject = CalculatorSubjectDto(
+                            val cleaned = CalculatorSubjectDto(
                                 subject_name = subject.subject_name,
                                 owner_id = subject.owner_id,
                                 entries = updatedEntries
                             )
-
-                            viewModel.updateSubject(subject._id, cleanedSubject)
+                            viewModel.updateSubject(subject._id, cleaned)
                         }
                     }
-                },
+                }
+                ,
                 enabled = selectedSubject != null,
+                modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                 colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1B5E20))
             ) {
-                Text("Save Changes", color = Color.White)
+                Text("Save", color = Color.White)
             }
         }
     }
@@ -245,33 +293,31 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
     // Diálogo para nueva materia
     if (showAddSubjectDialog) {
         AlertDialog(
-            onDismissRequest = {
-                showAddSubjectDialog = false
-                newSubjectName = ""
-            },
-            title = { Text("Add New Subject") },
-            text = {
+            onDismissRequest = { showAddSubjectDialog = false; newSubjectName = "" },
+            title   = { Text("Add New Subject") },
+            text    = {
                 OutlinedTextField(
-                    value = newSubjectName,
+                    value       = newSubjectName,
                     onValueChange = { newSubjectName = it },
-                    label = { Text("Subject Name") },
-                    singleLine = true
+                    label       = { Text("Subject Name") },
+                    singleLine  = true
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     if (ownerId != null && newSubjectName.isNotBlank()) {
-                        val entries = grades.mapNotNull { grade ->
-                            val percentage = grade.percentage.replace(',', '.').toDoubleOrNull()
-                            val value = grade.value.replace(',', '.').toDoubleOrNull()
+                        val validEntries = grades.all { it.name.isNotBlank() && it.percentage.toDoubleOrNull() != null && it.value.toDoubleOrNull() != null }
+                        if (!validEntries) {
+                            Toast.makeText(context, "Please complete all fields correctly before saving", Toast.LENGTH_SHORT).show()
+                            return@TextButton
+                        }
 
-                            if (percentage != null && value != null) {
-                                GradeEntryDto(
-                                    name = grade.name,
-                                    percentage = percentage,
-                                    grade = value
-                                )
-                            } else null
+                        val entries = grades.map {
+                            GradeEntryDto(
+                                name = it.name.trim(),
+                                percentage = it.percentage.replace(',', '.').toDouble(),
+                                grade = it.value.replace(',', '.').toDouble()
+                            )
                         }
 
                         val subject = CalculatorSubjectDto(
@@ -279,33 +325,26 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
                             owner_id = ownerId,
                             entries = entries
                         )
-
-                        viewModel.createSubject(subject) {
-                            viewModel.loadSubjects(ownerId)
-                        }
-
+                        viewModel.createSubject(subject) { viewModel.loadSubjects(ownerId) }
                         showAddSubjectDialog = false
                         newSubjectName = ""
                         grades = listOf(GradeInput("", "", ""))
+                    } else {
+                        Toast.makeText(context, "Subject name cannot be empty", Toast.LENGTH_SHORT).show()
                     }
                 }) {
                     Text("Save")
                 }
+
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showAddSubjectDialog = false
-                    newSubjectName = ""
-                }) {
+                TextButton(onClick = { showAddSubjectDialog = false; newSubjectName = "" }) {
                     Text("Cancel")
                 }
             }
         )
     }
 }
-
-
-
 
 @Composable
 fun GradeInputRow(
@@ -320,7 +359,11 @@ fun GradeInputRow(
     val valueFormatted = grade.value.replace(',', '.')
     val valueParsed = valueFormatted.toDoubleOrNull()
     val valueError = grade.value.isNotEmpty() && valueParsed == null
-    val valueOutOfRange = valueParsed != null && (valueParsed < 0.0 || valueParsed > 5.0)  // CAMBIO aquí
+    val valueOutOfRange = valueParsed != null && (valueParsed < 0.0 || valueParsed > 5.0)
+
+    val nameError = grade.name.isBlank()
+
+    val hasError = nameError || percentageError || percentageOutOfRange || valueError || valueOutOfRange
 
     Column {
         Row(
@@ -331,14 +374,15 @@ fun GradeInputRow(
                 value = grade.name,
                 onValueChange = { onUpdate(grade.copy(name = it)) },
                 label = { Text("Name") },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                isError = nameError
             )
             Spacer(modifier = Modifier.width(8.dp))
             OutlinedTextField(
                 value = grade.percentage,
                 onValueChange = {
                     val number = it.toDoubleOrNull()
-                    if (number == null || number >= 0.0) {
+                    if (number == null || number in 0.0..100.0) {
                         onUpdate(grade.copy(percentage = it))
                     }
                 },
@@ -352,15 +396,13 @@ fun GradeInputRow(
                 onValueChange = {
                     val newVal = it.replace(',', '.')
                     val doubleVal = newVal.toDoubleOrNull()
-                    val isValid = doubleVal != null &&
-                            doubleVal >= 0.0 &&
-                            doubleVal <= 5.0  // CAMBIO aquí
+                    val isValid = doubleVal != null && doubleVal in 0.0..5.0
 
                     if (isValid || it.isEmpty()) {
                         onUpdate(grade.copy(value = it))
                     }
                 },
-                label = { Text("Grade (0–5)") }, // CAMBIO aquí
+                label = { Text("Grade (0–5)") },
                 modifier = Modifier.width(100.dp),
                 isError = valueError || valueOutOfRange
             )
@@ -373,6 +415,8 @@ fun GradeInputRow(
                 )
             }
         }
+
+        // Errores
         if (percentageError) {
             Text(
                 text = "Only numeric values are allowed in %",
@@ -396,14 +440,13 @@ fun GradeInputRow(
         }
         if (valueOutOfRange) {
             Text(
-                text = "Grade must be between 0 and 5",  // CAMBIO aquí
+                text = "Grade must be between 0 and 5",
                 color = MaterialTheme.colors.error,
                 fontSize = 12.sp
             )
         }
     }
 }
-
 
 data class GradeInput(
     val name: String,

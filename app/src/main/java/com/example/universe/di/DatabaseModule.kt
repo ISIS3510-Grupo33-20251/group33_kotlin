@@ -8,6 +8,7 @@ import com.example.universe.data.db.dao.FriendDao
 import com.example.universe.data.db.dao.MeetingDao
 import com.example.universe.data.db.dao.NoteDao
 import com.example.universe.data.db.dao.ReminderDao
+import com.example.universe.data.db.dao.SubjectDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -56,4 +57,8 @@ object DatabaseModule {
         return database.reminderDao()
     }
 
+    @Provides
+    fun provideSubjectDao(database: AppDatabase): SubjectDao {
+        return database.subjectDao()
+    }
 }
