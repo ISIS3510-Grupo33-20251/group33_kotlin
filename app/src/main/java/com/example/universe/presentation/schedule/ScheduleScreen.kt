@@ -43,9 +43,20 @@ fun ScheduleScreen(
     meetingViewModel: MeetingViewModel = hiltViewModel()
 ) {
     val selectedDate by scheduleViewModel.selectedDate.collectAsState()
-    val formattedDate by scheduleViewModel.formattedDate.collectAsState()
-    val weekDates by scheduleViewModel.weekDates.collectAsState()
+    val formattedDate by remember {
+        derivedStateOf {
+        selectedDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))
+        }
+    }
+    val weekDates by remember {
+        derivedStateOf {
+            scheduleViewModel.getWeekDates(selectedDate)
+        }
+    }
     val timeSlots by scheduleViewModel.timeSlots.collectAsState()
+    val timeSlotList = remember(timeSlots) {
+        timeSlots.chunked(6)
+    }
     val isLoading by scheduleViewModel.isLoading.collectAsState()
     val error by scheduleViewModel.error.collectAsState()
     val offlineMode by scheduleViewModel.offlineMode.collectAsState()
@@ -114,7 +125,7 @@ fun ScheduleScreen(
                 .fillMaxWidth()
         ) {
             // First, check if we have any time slots with meetings
-            val hasMeetings = timeSlots.any { it.meetings.isNotEmpty() }
+            val hasMeetings = timeSlotList.flatten().any { it.meetings.isNotEmpty() }
 
             // If we have data, display it even in offline mode
             if (hasMeetings || !isLoading) {
@@ -124,10 +135,13 @@ fun ScheduleScreen(
                         .padding(horizontal = 16.dp),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
-                    items(timeSlots) { slot ->
+                    items(
+                        items = timeSlotList.flatten(),
+                        key = { it.time }
+                    ) { slot ->
                         TimeSlotItem(
                             timeSlot = slot,
-                            onMeetingClick = { /* Handle meeting click */ }
+                            onMeetingClick = { /* Handle click */ }
                         )
                     }
                 }
@@ -287,9 +301,10 @@ fun TimeSlotItem(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
     ) {
-        // Time label
+        val timeText = remember(timeSlot.time) { timeSlot.time }
+
         Text(
-            text = timeSlot.time,
+            text = timeText,
             fontSize = 14.sp,
             color = Color.Gray,
             modifier = Modifier.padding(vertical = 4.dp)
