@@ -36,8 +36,11 @@ import com.example.universe.presentation.assignments.CalculatorScreen
 import com.example.universe.presentation.assignments.FlashcardDetailScreen
 import com.example.universe.presentation.assignments.FlashcardsScreen
 import com.example.universe.presentation.assignments.NoteViewModel
+import com.example.universe.presentation.friends.FriendsViewModel
 import com.example.universe.presentation.reminders.RemindersScreen
+import com.example.universe.presentation.schedule.ScheduleViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 
@@ -107,6 +110,10 @@ fun AppNavHost(
     authState: AuthState,
     onLogout: () -> Unit
 ) {
+    // Preload common ViewModels to reduce transition time
+    val scheduleViewModel: ScheduleViewModel = hiltViewModel()
+    val friendsViewModel: FriendsViewModel = hiltViewModel()
+
     NavHost(
         navController = navController,
         startDestination = when (authState) {

@@ -233,7 +233,7 @@ class ScheduleViewModel @Inject constructor(
         return date.format(formatter)
     }
 
-    private fun getWeekDates(forDate: LocalDate): List<LocalDate> {
+    fun getWeekDates(forDate: LocalDate): List<LocalDate> {
         // Find the Monday of the current week
         val monday = forDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 

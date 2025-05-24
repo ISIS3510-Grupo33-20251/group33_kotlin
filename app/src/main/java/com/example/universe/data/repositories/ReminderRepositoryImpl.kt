@@ -164,7 +164,7 @@ class ReminderRepositoryImpl @Inject constructor(
                 val token = authRepository.getAuthToken()
                 if (token != null) {
                     reminderApiService.deleteReminder("Bearer $token", reminderId)
-                    reminderDao.deleteReminder(reminderId) // Remove completely if sync successful
+                    reminderDao.deleteReminder(reminderId)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to delete from network, marked for deletion", e)
