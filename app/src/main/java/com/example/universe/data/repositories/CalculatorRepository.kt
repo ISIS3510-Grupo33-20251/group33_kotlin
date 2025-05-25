@@ -50,16 +50,23 @@ class CalculatorRepository @Inject constructor(
     }
 
     suspend fun updateSubject(subjectId: String, updatedSubject: CalculatorSubjectDto): String {
+        val subjectWithoutId = updatedSubject.copy(_id = null) // 👈 eliminar ID antes de enviar
+
         try {
-            // Enviar DTO sin _id en el body
-            val response = api.updateSubject(subjectId, updatedSubject)
+            val response = api.updateSubject(subjectId, subjectWithoutId)
             subjectDao.insertSubject(dtoToEntity(updatedSubject.copy(_id = subjectId)))
             return response["message"] ?: "Updated remotely"
         } catch (e: Exception) {
-            subjectDao.insertSubject(dtoToEntity(updatedSubject.copy(_id = subjectId)))
+            subjectDao.insertSubject(
+                dtoToEntity(
+                    updatedSubject.copy(_id = subjectId),
+                    isSynced = false
+                )
+            )
             return "Updated locally (pending sync)"
         }
     }
+
 
 
     suspend fun deleteSubject(subjectId: String): String {
@@ -125,7 +132,7 @@ class CalculatorRepository @Inject constructor(
 
                     if (existsOnServer) {
                         // Actualizar en el backend
-                        api.updateSubject(entity.id, dto)
+                        api.updateSubject(entity.id, dto.copy(_id = null))
 
                         // Marcar como sincronizado localmente
                         val syncedEntity = entity.copy(isSynced = true, deleted = false)

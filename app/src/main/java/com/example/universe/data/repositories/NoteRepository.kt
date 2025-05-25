@@ -84,21 +84,44 @@ class NoteRepository @Inject constructor(
                         noteDao.deleteNoteById(noteEntity.id)
                     }
                 } else {
-                    val response = api.createNote(noteDto)
-                    if (response.isSuccessful) {
-                        val syncedNote = response.body()
-                        if (syncedNote != null) {
-                            noteDao.insertNote(NoteMapper.fromDto(syncedNote).copy(isSynced = true))
-                            apiUser.addNoteToUser(syncedNote.owner_id!!, syncedNote.id!!)
-                            noteDao.deleteNoteById(noteEntity.id)
+                    // 1. Verificar si ya existe en el servidor
+                    val existsOnServer = try {
+                        api.getNoteById(noteEntity.id).isSuccessful
+                    } catch (e: Exception) {
+                        false
+                    }
+
+                    if (existsOnServer) {
+                        // 2. Actualizar nota en el servidor
+                        val updateResponse = api.updateNote(noteEntity.id, noteDto.copy(id = null)) // eliminar el ID del body si es necesario
+                        if (updateResponse.isSuccessful) {
+                            val syncedNote = updateResponse.body()
+                            if (syncedNote != null) {
+                                noteDao.insertNote(NoteMapper.fromDto(syncedNote).copy(isSynced = true))
+                            }
+                        }
+                    } else {
+                        // 3. Crear nueva nota en el servidor
+                        val createResponse = api.createNote(noteDto)
+                        if (createResponse.isSuccessful) {
+                            val syncedNote = createResponse.body()
+                            if (syncedNote != null) {
+                                noteDao.insertNote(NoteMapper.fromDto(syncedNote).copy(isSynced = true))
+                                apiUser.addNoteToUser(syncedNote.owner_id!!, syncedNote.id!!)
+                                // borrar la nota antigua local si el id cambió
+                                if (syncedNote.id != noteEntity.id) {
+                                    noteDao.deleteNoteById(noteEntity.id)
+                                }
+                            }
                         }
                     }
                 }
             } catch (_: Exception) {
-                // Ignorar errores para reintentar en otro ciclo
+                // Ignorar errores y reintentar después
             }
         }
     }
+
 
 
     suspend fun getCachedNotes(userId: String): List<NoteDto> {
