@@ -35,22 +35,8 @@ class ReminderRepositoryImpl @Inject constructor(
 
     override suspend fun getReminders(userId: String, localOnly: Boolean): Result<List<Reminder>> {
         return try {
-            // Always get from local first
             val localEntities = reminderDao.getRemindersByUser(userId)
             val localReminders = localEntities.map { ReminderMapper.fromEntity(it) }
-
-            if (localOnly || localReminders.isNotEmpty()) {
-                // If we have local data and it's not empty, use it
-                // In background, try to sync if not local-only
-                if (!localOnly) {
-                    try {
-                        syncFromNetwork(userId)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Background sync failed", e)
-                    }
-                }
-                return Result.success(localReminders)
-            }
 
             // If no local data and not local-only, try network
             if (!localOnly) {
@@ -58,8 +44,19 @@ class ReminderRepositoryImpl @Inject constructor(
                 if (networkResult.isSuccess) {
                     val updatedEntities = reminderDao.getRemindersByUser(userId)
                     val updatedReminders = updatedEntities.map { ReminderMapper.fromEntity(it) }
-                    return Result.success(updatedReminders)
+                    val userReminders = updatedReminders.filter { reminder ->
+                        reminder.userId.equals(userId)
+                    }
+                    return Result.success(userReminders)
                 }
+            }
+
+            val userReminders = localReminders.filter { reminder ->
+                reminder.userId.equals(userId)
+            }
+
+            if (localReminders.isNotEmpty()) {
+                return Result.success(userReminders)
             }
 
             // Return empty list if all fails
@@ -89,7 +86,7 @@ class ReminderRepositoryImpl @Inject constructor(
                     "meeting" -> ReminderEntityType.MEETING
                     else -> ReminderEntityType.CUSTOM
                 },
-                entityId = entityId,
+                entityId = title,
                 title = title,
                 message = message,
                 remindAt = remindAt,
@@ -156,18 +153,26 @@ class ReminderRepositoryImpl @Inject constructor(
             // Cancel notification
             reminderScheduler.cancelNotification(reminderId)
 
-            // Mark as deleted locally (for eventual sync)
-            reminderDao.markAsDeleted(reminderId)
+            // Get the backend ID for deletion
+            val backendId = reminderDao.getBackendId(reminderId)
 
-            // Try to delete from backend
-            try {
-                val token = authRepository.getAuthToken()
-                if (token != null) {
-                    reminderApiService.deleteReminder("Bearer $token", reminderId)
-                    reminderDao.deleteReminder(reminderId)
+            if (backendId != null) {
+                // Try to delete from backend using backend ID
+                try {
+                    val token = authRepository.getAuthToken()
+                    if (token != null) {
+                        reminderApiService.deleteReminder("Bearer $token", backendId)
+                        reminderDao.deleteReminder(reminderId) // Delete local record
+                        Log.d(TAG, "Deleted reminder: local=$reminderId, backend=$backendId")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to delete from network, marking for deletion", e)
+                    reminderDao.markAsDeleted(reminderId)
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to delete from network, marked for deletion", e)
+            } else {
+                // No backend ID, just delete locally
+                reminderDao.deleteReminder(reminderId)
+                Log.d(TAG, "Deleted local-only reminder: $reminderId")
             }
 
             Result.success(Unit)
@@ -283,8 +288,12 @@ class ReminderRepositoryImpl @Inject constructor(
 
         val response = reminderApiService.createReminder("Bearer $token", dto)
         if (response.isSuccessful) {
-            reminderDao.markAsSynced(reminder.id)
-            Log.d(TAG, "Synced reminder ${reminder.id} to network")
+            val backendReminder = response.body()
+            if (backendReminder?.id != null) {
+                // Store the backend ID mapping
+                reminderDao.updateBackendId(reminder.id, backendReminder.id)
+                Log.d(TAG, "Mapped local ID ${reminder.id} to backend ID ${backendReminder.id}")
+            }
         }
     }
 }
