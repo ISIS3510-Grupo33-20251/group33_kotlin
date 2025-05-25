@@ -133,10 +133,36 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Mostrar materia con menor promedio
+        val lowestSubject = subjects
+            .map { subject ->
+                val weighted = subject.entries.sumOf { it.grade * (it.percentage?.div(100.0)!!) }
+                subject.subject_name to weighted
+            }
+            .minByOrNull { it.second }
+
+        lowestSubject?.let { (name, avg) ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = 4.dp,
+                backgroundColor = Color(0xFFFFEBEE)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("📉 Lowest Performing Subject", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(5.dp))
+                    Text("Subject: $name")
+                    Text("Average: %.2f".format(avg))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
             "Grade Calculator${selectedSubject?.let { ": ${it.subject_name}" } ?: ""}",
             style = MaterialTheme.typography.h6
+
         )
+
 
         Spacer(modifier = Modifier.height(8.dp))
         if (!isConnected) {
@@ -225,7 +251,6 @@ fun CalculatorScreen(navController: NavController, viewModel: CalculatorViewMode
                 .padding(top = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-
             // --- Aquí deshabilitamos el botón Add cuando hay una materia seleccionada ---
             Button(
                 onClick = { showAddSubjectDialog = true },
