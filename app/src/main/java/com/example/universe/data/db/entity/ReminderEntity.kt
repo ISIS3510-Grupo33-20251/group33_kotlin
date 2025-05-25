@@ -11,10 +11,12 @@ data class ReminderEntity(
         val entityId: String?,
         val title: String,
         val message: String,
-        val remindAt: Long, // Unix timestamp
+        val remindAt: Long,
         val status: String,
         val createdAt: Long,
         val isLocallyScheduled: Boolean = false,
-        val isSynced: Boolean = false, // For eventual connectivity
-        val deleted: Boolean = false
+        val isSynced: Boolean = false,
+        val deleted: Boolean = false,
+        val backendId: String? = null  // Add this field to track backend ID
 )
+

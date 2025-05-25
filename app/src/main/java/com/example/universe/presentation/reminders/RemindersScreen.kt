@@ -292,14 +292,16 @@ fun ReminderItem(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = reminder.title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                reminder.entityId?.let {
+                    Text(
+                        text = it,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
                 if (reminder.message.isNotBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))

@@ -52,4 +52,10 @@ interface ReminderDao {
 
     @Query("DELETE FROM reminders WHERE deleted = 1 AND isSynced = 1")
     suspend fun cleanupDeletedSyncedReminders()
+
+    @Query("SELECT backendId FROM reminders WHERE id = :localId")
+    suspend fun getBackendId(localId: String): String?
+
+    @Query("UPDATE reminders SET backendId = :backendId, isSynced = 1 WHERE id = :localId")
+    suspend fun updateBackendId(localId: String, backendId: String)
 }

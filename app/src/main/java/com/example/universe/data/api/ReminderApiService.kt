@@ -6,7 +6,7 @@ import retrofit2.http.*
 
 interface ReminderApiService {
 
-    @GET("users/{user_id}/reminders")
+    @GET("reminders/user/{user_id}")
     suspend fun getUserReminders(
         @Header("Authorization") token: String,
         @Path("user_id") userId: String
